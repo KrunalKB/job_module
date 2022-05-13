@@ -1,65 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Registration Form</title>
-    <style>
-      body {
-        background-color: black;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      /* Add padding to containers */
-      .container {
-        padding: 16px;
-        background-color: white;
-      }
-
-      /* Full-width input fields */
-      input {
-        width: 100%;
-        padding: 15px;
-        margin: 5px 0 22px 0;
-        display: inline-block;
-        border: none;
-        background: #f1f1f1;
-      }
-
-      /* Overwrite default styles of hr */
-      hr {
-        border: 1px solid #f1f1f1;
-        margin-bottom: 25px;
-      }
-
-      /* Set a style for the submit button */
-      .registerbtn {
-        background-color: #04aa6d;
-        color: white;
-        padding: 16px 20px;
-        margin: 8px 0;
-        border: none;
-        cursor: pointer;
-        width: 100%;
-        opacity: 0.9;
-      }
-
-      .registerbtn:hover {
-        opacity: 1;
-      }
-    </style>
-  </head>
-  <body>
-    <form action="">
+<?php
+?>
+    <form method="post" class="reg_form">
       <div class="container">
-        <p>Please fill in this form to create an account.</p>
+        <p><?php echo esc_html('Please fill in this form to create an account.'); ?></p>
         <hr />
 
-        <label for="username"><b>Username</b></label>
+        <label for="username"><b><?php echo esc_html('Username'); ?></b></label>
         <input
           type="text"
           placeholder="Enter username"
@@ -68,7 +14,7 @@
           required
         />
 
-        <label for="email"><b>Email</b></label>
+        <label for="email"><b><?php echo esc_html('Email'); ?></b></label>
         <input
           type="email"
           placeholder="Enter Email"
@@ -77,7 +23,7 @@
           required
         />
 
-        <label for="fname"><b>First name</b></label>
+        <label for="fname"><b><?php echo esc_html('First name'); ?></b></label>
         <input
           type="text"
           placeholder="Enter first name"
@@ -86,7 +32,7 @@
           required
         />
 
-        <label for="lname"><b>Last name</b></label>
+        <label for="lname"><b><?php echo esc_html('Last name'); ?></b></label>
         <input
           type="text"
           placeholder="Enter last name"
@@ -95,19 +41,19 @@
           required
         />
 
-        <label for="psw"><b>Password</b></label>
+        <label for="password"><b><?php echo esc_html('Password'); ?></b></label>
         <input
           type="password"
           placeholder="Enter Password"
-          name="psw"
-          id="psw"
+          name="password"
+          id="password"
           required
         />
-
         <hr />
 
-        <button type="submit" class="registerbtn">Register</button>
+        <button type="submit" class="cl_registerbtn" ><?php echo esc_html('Register'); ?></button>
       </div>
     </form>
-  </body>
-</html>
+
+<?php
+?>

@@ -46,6 +46,17 @@ class jbm_controller
 
         /* Create shortcode for contractor registration form */
         add_shortcode('contractor_reg', array($this,'jbm_contractor_reg'));
+
+        /* Create shortcode for job creation form */
+        add_shortcode('job_form', array($this,'jbm_job_form'));
+
+        /* Execute ajax hook */
+        add_action('wp_ajax_client_hook', array($this,'jbm_register_client'));
+        add_action('wp_ajax_contractor_hook', array($this,'jbm_register_contractor'));
+
+        /* Create custom post type */
+        add_action('init', array($this,'jbm_create_cpt'));
+
     }
 
     /**
@@ -55,18 +66,20 @@ class jbm_controller
      *
      * @since 1.0.0
      */
-
     public function jbm_activate()
     {
         global $wp_roles;
-        $total_role = $wp_roles->get_names();
-        $admin_role = $wp_roles->get_role('subscriber');
+        $total_role      = $wp_roles->get_names();
+        $subscriber_role = $wp_roles->get_role('subscriber');
+
         
         if (!in_array('Client', $total_role)) {
-            add_role('client', 'Client', $admin_role->capabilities);
+            add_role('client', 'Client', $subscriber_role->capabilities);
+
         }
         if (!in_array('Contractor', $total_role)) {
-            add_role('contractor', 'Contractor', $admin_role->capabilities);
+            add_role('contractor', 'Contractor', $subscriber_role->capabilities);
+
         }
     }
 
@@ -97,6 +110,26 @@ class jbm_controller
      */
     public function jbm_client_reg()
     {
+        wp_enqueue_script(
+    'client-js',
+    jbm_url . 'assets/js/client_reg.js',
+    array('jquery'),
+    1.0,
+    true
+);
+        wp_localize_script(
+            'client-js',
+            'myVar',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('client-nonce')
+            )
+        );
+        wp_enqueue_style(
+            'client-css',
+            jbm_url . 'assets/css/client_reg.css'
+        );
+
         require_once jbm_path.'inc/client-registration.php';
     }
 
@@ -107,7 +140,163 @@ class jbm_controller
      */
     public function jbm_contractor_reg()
     {
+        wp_enqueue_script(
+    'contractor-js',
+    jbm_url . 'assets/js/contractor_reg.js',
+    array('jquery'),
+    1.0,
+    true
+);
+        wp_localize_script(
+            'contractor-js',
+            'myVar',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('contractor-nonce')
+            )
+        );
+        wp_enqueue_style(
+            'contractor-css',
+            jbm_url .'assets/css/contractor_reg.css'
+        );
+
         require_once jbm_path.'inc/contractor-regitration.php';
+    }
+
+    /**
+     * Callback function of job form shortcode
+     *
+     * @since 1.0.0
+     */
+    public function jbm_job_form()
+    {
+        wp_enqueue_style(
+            'job-form',
+            jbm_url .'assets/css/job-form.css'
+        );
+        require_once jbm_path.'inc/job-form.php';
+    }
+
+    /**
+     * Ajax callback for client registration
+     *
+     * @since 1.0.0
+     */
+    public function jbm_register_client()
+    {
+        if (wp_verify_nonce($_POST['nonce'], 'client-nonce')) {
+            $username = filter_var($_POST['username'], FILTER_SANITIZE_STRING);
+            $email    = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+            $fname    = filter_var($_POST['fname'], FILTER_SANITIZE_STRING);
+            $lname    = filter_var($_POST['lname'], FILTER_SANITIZE_STRING);
+            $password = trim($_POST['password']);
+
+            $clientdata = array(
+                'user_login' => $username,
+                'user_email' => $email,
+                'user_pass'  => $password,
+                'first_name' => $fname,
+                'last_name'  => $lname,
+                'role'       => 'client'
+            );
+
+            $insert_client = wp_insert_user($clientdata);
+        }
+    }
+
+    /**
+     * Ajax callback for contractor registration
+     *
+     * @since 1.0.0
+     */
+    public function jbm_register_contractor()
+    {
+        if (wp_verify_nonce($_POST['nonce'], 'contractor-nonce')) {
+            $username   = filter_var($_POST['username'], FILTER_SANITIZE_STRING);
+            $email      = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+            $fname      = filter_var($_POST['fname'], FILTER_SANITIZE_STRING);
+            $lname      = filter_var($_POST['lname'], FILTER_SANITIZE_STRING);
+            $password   = trim($_POST['password']);
+            $buss_name  = filter_var($_POST['buss_name'], FILTER_SANITIZE_STRING);
+            $buss_phone = filter_var($_POST['buss_phone'], FILTER_SANITIZE_NUMBER_INT);
+
+            $contractordata = array(
+                'user_login' => $username,
+                'user_email' => $email,
+                'user_pass'  => $password,
+                'first_name' => $fname,
+                'last_name'  => $lname,
+                'role'       => 'contractor'
+            );
+
+            $insert_contractor = wp_insert_user($contractordata);
+
+            if ($insert_contractor) {
+                $user_data = get_user_by('login', $username);
+                add_user_meta($user_data->ID, 'bussiness-name', $buss_name);
+                add_user_meta($user_data->ID, 'bussiness-number', $buss_phone);
+            }
+        }
+    }
+
+    /**
+     * Create custom post type of job
+     * 
+     * @since 1.0.0
+     */
+    public function jbm_create_cpt()
+    {
+        $labels = array(
+            'name'                  => _x('job', 'Post Type General Name', 'jbm'),
+            'singular_name'         => _x('job', 'Post Type Singular Name', 'jbm'),
+            'menu_name'             => _x('job', 'Admin Menu text', 'jbm'),
+            'name_admin_bar'        => _x('job', 'Add New on Toolbar', 'jbm'),
+            'archives'              => __('job Archives', 'jbm'),
+            'attributes'            => __('job Attributes', 'jbm'),
+            'parent_item_colon'     => __('Parent job:', 'jbm'),
+            'all_items'             => __('All job', 'jbm'),
+            'add_new_item'          => __('Add New job', 'jbm'),
+            'add_new'               => __('Add New', 'jbm'),
+            'new_item'              => __('New job', 'jbm'),
+            'edit_item'             => __('Edit job', 'jbm'),
+            'update_item'           => __('Update job', 'jbm'),
+            'view_item'             => __('View job', 'jbm'),
+            'view_items'            => __('View job', 'jbm'),
+            'search_items'          => __('Search job', 'jbm'),
+            'not_found'             => __('Not found', 'jbm'),
+            'not_found_in_trash'    => __('Not found in Trash', 'jbm'),
+            'featured_image'        => __('Featured Image', 'jbm'),
+            'set_featured_image'    => __('Set featured image', 'jbm'),
+            'remove_featured_image' => __('Remove featured image', 'jbm'),
+            'use_featured_image'    => __('Use as featured image', 'jbm'),
+            'insert_into_item'      => __('Insert into job', 'jbm'),
+            'uploaded_to_this_item' => __('Uploaded to this job', 'jbm'),
+            'items_list'            => __('job list', 'jbm'),
+            'items_list_navigation' => __('job list navigation', 'jbm'),
+            'filter_items_list'     => __('Filter job list', 'jbm'),
+        );
+        $args = array(
+            'label'               => __('job', 'jbm'),
+            'description'         => __('', 'jbm'),
+            'labels'              => $labels,
+            'menu_icon'           => 'dashicons-editor-table',
+            'supports'            => array('title', 'editor', 'excerpt', 'thumbnail', 'revisions', 'author', 'comments', 'page-attributes', 'post-formats', 'custom-fields'),
+            'taxonomies'          => array(),
+            'public'              => true,
+            'show_ui'             => true,
+            'show_in_menu'        => true,
+            'menu_position'       => 5,
+            'show_in_admin_bar'   => true,
+            'show_in_nav_menus'   => true,
+            'can_export'          => true,
+            'has_archive'         => true,
+            'hierarchical'        => false,
+            'exclude_from_search' => false,
+            'show_in_rest'        => true,
+            'publicly_queryable'  => true,
+            'capability_type'     => 'post',
+        );
+        register_post_type('job', $args);
     }
 }
 
