@@ -50,13 +50,34 @@ class jbm_controller
         /* Create shortcode for job creation form */
         add_shortcode('job_form', array($this,'jbm_job_form'));
 
+        /* Create shortcode for job list */
+        add_shortcode('job_list', array($this,'jbm_job_list'));
+
         /* Execute ajax hook */
         add_action('wp_ajax_client_hook', array($this,'jbm_register_client'));
         add_action('wp_ajax_contractor_hook', array($this,'jbm_register_contractor'));
+        add_action('wp_ajax_jobform_hook', array($this,'jbm_jobform_data'));
+        add_action('wp_ajax_search_user_hook', array($this,'jbm_search_user'));
 
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
+    }
+    
+    public function jbm_search_user()
+    {
+        global $wpdb;
+        if (isset($_POST['search'])) {
+            $search = sanitize_text_field($_POST['search']);
 
+            $result = $wpdb->get_var("SELECT distinct(display_name) FROM wp_users WHERE display_name LIKE '%{$search}%' ");
+            if (isset($result)) {
+                echo $result;
+                exit();
+            } else {
+                echo "No data found!";
+                exit();
+            }
+        }
     }
 
     /**
@@ -72,14 +93,12 @@ class jbm_controller
         $total_role      = $wp_roles->get_names();
         $subscriber_role = $wp_roles->get_role('subscriber');
 
-        
+   
         if (!in_array('Client', $total_role)) {
             add_role('client', 'Client', $subscriber_role->capabilities);
-
         }
         if (!in_array('Contractor', $total_role)) {
             add_role('contractor', 'Contractor', $subscriber_role->capabilities);
-
         }
     }
 
@@ -111,12 +130,12 @@ class jbm_controller
     public function jbm_client_reg()
     {
         wp_enqueue_script(
-    'client-js',
-    jbm_url . 'assets/js/client_reg.js',
-    array('jquery'),
-    1.0,
-    true
-);
+            'client-js',
+            jbm_url . 'assets/js/client_reg.js',
+            array('jquery'),
+            1.0,
+            true
+        );
         wp_localize_script(
             'client-js',
             'myVar',
@@ -134,57 +153,13 @@ class jbm_controller
     }
 
     /**
-     * Callback function of contractor registration shortcode
-     *
-     * @since 1.0.0
-     */
-    public function jbm_contractor_reg()
-    {
-        wp_enqueue_script(
-    'contractor-js',
-    jbm_url . 'assets/js/contractor_reg.js',
-    array('jquery'),
-    1.0,
-    true
-);
-        wp_localize_script(
-            'contractor-js',
-            'myVar',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce'    => wp_create_nonce('contractor-nonce')
-            )
-        );
-        wp_enqueue_style(
-            'contractor-css',
-            jbm_url .'assets/css/contractor_reg.css'
-        );
-
-        require_once jbm_path.'inc/contractor-regitration.php';
-    }
-
-    /**
-     * Callback function of job form shortcode
-     *
-     * @since 1.0.0
-     */
-    public function jbm_job_form()
-    {
-        wp_enqueue_style(
-            'job-form',
-            jbm_url .'assets/css/job-form.css'
-        );
-        require_once jbm_path.'inc/job-form.php';
-    }
-
-    /**
-     * Ajax callback for client registration
-     *
-     * @since 1.0.0
-     */
+    * Ajax callback for client registration
+    *
+    * @since 1.0.0
+    */
     public function jbm_register_client()
     {
-        if (wp_verify_nonce($_POST['nonce'], 'client-nonce')) {
+        if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'client-nonce')) {
             $username = filter_var($_POST['username'], FILTER_SANITIZE_STRING);
             $email    = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
             $fname    = filter_var($_POST['fname'], FILTER_SANITIZE_STRING);
@@ -205,13 +180,43 @@ class jbm_controller
     }
 
     /**
-     * Ajax callback for contractor registration
+     * Callback function of contractor registration shortcode
      *
      * @since 1.0.0
      */
+    public function jbm_contractor_reg()
+    {
+        wp_enqueue_script(
+            'contractor-js',
+            jbm_url . 'assets/js/contractor_reg.js',
+            array('jquery'),
+            1.0,
+            true
+        );
+        wp_localize_script(
+            'contractor-js',
+            'myVar',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('contractor-nonce')
+            )
+        );
+        wp_enqueue_style(
+            'contractor-css',
+            jbm_url .'assets/css/contractor_reg.css'
+        );
+
+        require_once jbm_path.'inc/contractor-regitration.php';
+    }
+
+    /**
+    * Ajax callback for contractor registration
+    *
+    * @since 1.0.0
+    */
     public function jbm_register_contractor()
     {
-        if (wp_verify_nonce($_POST['nonce'], 'contractor-nonce')) {
+        if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'contractor-nonce')) {
             $username   = filter_var($_POST['username'], FILTER_SANITIZE_STRING);
             $email      = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
             $fname      = filter_var($_POST['fname'], FILTER_SANITIZE_STRING);
@@ -240,8 +245,73 @@ class jbm_controller
     }
 
     /**
+     * Callback function of job form shortcode
+     *
+     * @since 1.0.0
+     */
+    public function jbm_job_form()
+    {
+        wp_enqueue_script(
+            'jobform-js',
+            jbm_url . 'assets/js/job_form.js',
+            array('jquery'),
+            1.0,
+            true
+        );
+        wp_localize_script(
+            'jobform-js',
+            'myVar',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('jobform-nonce')
+            )
+        );
+        wp_enqueue_style(
+            'job-form',
+            jbm_url .'assets/css/job-form.css'
+        );
+        require_once jbm_path.'inc/job-form.php';
+    }
+
+    /**
+    * Ajax callback for jobform data
+    *
+    * @since 1.0.0
+    */
+    public function jbm_jobform_data()
+    {
+        if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'jobform-nonce')) {
+            $client     = sanitize_text_field($_POST['client']);
+            $contractor = sanitize_text_field($_POST['contractor']);
+            $jobname    = sanitize_text_field($_POST['jobname']);
+            $jobdesc    = sanitize_textarea_field($_POST['jobdesc']);
+            $price      = sanitize_text_field($_POST['price']);
+            $cpt_args = array(
+                'post_title'  => $jobname,
+                'post_status' => 'publish',
+                'post_type'   => 'job'
+            );
+            $insert_data = wp_insert_post($cpt_args);
+            update_field('client_name', $client, $insert_data);
+            update_field('contractor_name', $contractor, $insert_data);
+            update_field('job_description', $jobdesc, $insert_data);
+            update_field('price', $price, $insert_data);
+        }
+    }
+
+    /**
+    * Callback function of job list shortcode
+    *
+    * @since 1.0.0
+    */
+    public function jbm_job_list()
+    {
+        require_once jbm_path.'inc/job-list.php';
+    }
+
+    /**
      * Create custom post type of job
-     * 
+     *
      * @since 1.0.0
      */
     public function jbm_create_cpt()
@@ -277,7 +347,7 @@ class jbm_controller
         );
         $args = array(
             'label'               => __('job', 'jbm'),
-            'description'         => __('', 'jbm'),
+            'description'         => __('Display job creation form', 'jbm'),
             'labels'              => $labels,
             'menu_icon'           => 'dashicons-editor-table',
             'supports'            => array('title', 'editor', 'excerpt', 'thumbnail', 'revisions', 'author', 'comments', 'page-attributes', 'post-formats', 'custom-fields'),

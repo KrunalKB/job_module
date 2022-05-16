@@ -1,13 +1,14 @@
 <?php
 
 global $current_user;
-$role         = $current_user->roles;
-$current_role = implode($role);
-$client_role = "client";
+$role            = $current_user->roles;
+$current_role    = implode($role);
+$client_role     = "administrator";
 $contractor_role = "contractor";
 
-?>
-    <form method="post" class="reg_form">
+if (is_user_logged_in()) {
+    ?>
+    <form method="post" class="reg_form" id="regfrm">
     <div class="container">
     <?php
         if ($current_role == $contractor_role) {
@@ -22,8 +23,8 @@ $contractor_role = "contractor";
             />
             <?php
         }
-        if ($current_role == $client_role) {
-            ?>  
+    if ($current_role == $client_role) {
+        ?>  
             <label for="contractor"><b><?php echo esc_html('Select contractor'); ?></b></label>
             <input
             type="text"
@@ -33,8 +34,9 @@ $contractor_role = "contractor";
             required
             />
             <?php
-        }
-    ?>
+    } ?>
+        <table><tr><td id="searchresult"></td></tr></table>
+        <!-- <div id="searchresult"></div> -->
         
         <label for="jobname"><b><?php echo esc_html('Job name'); ?></b></label>
         <input
@@ -70,8 +72,9 @@ $contractor_role = "contractor";
           required  
         />
 
-        <button type="submit" class="cl_registerbtn" ><?php echo esc_html('Submit'); ?></button>
+        <button type="submit" class="job_registerbtn" ><?php echo esc_html('Submit'); ?></button>
       </div>
     </form>
-<?php
+  <?php
+}
 ?>

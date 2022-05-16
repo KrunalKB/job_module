@@ -1,6 +1,6 @@
 <?php
 ?>
-    <form method="post" class="reg_form">
+    <form method="post" class="reg_form" id="regfrm">
       <div class="container">
         <p><?php echo esc_html('Please fill in this form to create an account.'); ?></p>
         <hr />
