@@ -1,25 +1,17 @@
+// Store jobform data to custom post type
 (function ($) {
-  $("#searchresult").hide();
+  $("#searchtable").hide();
   function job_form() {
-    var client = $("#client").val();
-    var contractor = $("#contractor").val();
-    var jobname = $("#jobname").val();
-    var jobdesc = $("#jobdesc").val();
-    var price = $("#price").val();
-    var image = $("#image").val();
+    var formdata = new FormData(reg_form);
+    formdata.append("action", "jobform_hook");
+    formdata.append("nonce", myVar.nonce);
+
     $.ajax({
       url: myVar.ajax_url,
       type: "POST",
-      data: {
-        action: "jobform_hook",
-        nonce: myVar.nonce,
-        client: client,
-        contractor: contractor,
-        jobname: jobname,
-        jobdesc: jobdesc,
-        price: price,
-        image: image,
-      },
+      contentType: false,
+      processData: false,
+      data: formdata,
       success: function (response) {
         alert("Submitted successfully");
       },
@@ -31,6 +23,7 @@
   });
 })(jQuery);
 
+// Getting client name
 (function ($) {
   $("#client").keyup(function (e) {
     e.preventDefault;
@@ -40,19 +33,48 @@
         url: myVar.ajax_url,
         type: "POST",
         data: {
-          action: "search_user_hook",
+          action: "search_client_hook",
           search: search,
         },
         success: function (response) {
-          $("#searchresult").fadeIn("fast").html(response);
+          $("#searchtable").fadeIn("fast").html(response);
+          console.log(response);
         },
       });
     } else {
-      $("#searchresult").fadeOut();
+      $("#searchtable").fadeOut();
     }
   });
-  $("#searchresult").on("click", function () {
+  $(document).on("click", "#searchtable li", function () {
     $("#client").val($(this).text());
-    $("#searchresult").fadeOut("fast");
+    $("#searchtable").fadeOut("fast");
+  });
+})(jQuery);
+
+// Getting contractor name
+(function ($) {
+  $("#contractor").keyup(function (e) {
+    e.preventDefault;
+    var search = $(this).val();
+    if (search != "") {
+      $.ajax({
+        url: myVar.ajax_url,
+        type: "POST",
+        data: {
+          action: "search_contractor_hook",
+          search: search,
+        },
+        success: function (response) {
+          $("#searchtable").fadeIn("fast").html(response);
+          console.log(response);
+        },
+      });
+    } else {
+      $("#searchtable").fadeOut();
+    }
+  });
+  $(document).on("click", "#searchtable li", function () {
+    $("#contractor").val($(this).text());
+    $("#searchtable").fadeOut("fast");
   });
 })(jQuery);

@@ -57,28 +57,14 @@ class jbm_controller
         add_action('wp_ajax_client_hook', array($this,'jbm_register_client'));
         add_action('wp_ajax_contractor_hook', array($this,'jbm_register_contractor'));
         add_action('wp_ajax_jobform_hook', array($this,'jbm_jobform_data'));
-        add_action('wp_ajax_search_user_hook', array($this,'jbm_search_user'));
+        add_action('wp_ajax_search_client_hook', array($this,'jbm_search_client'));
+        add_action('wp_ajax_search_contractor_hook', array($this,'jbm_search_contractor'));
 
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
     }
-    
-    public function jbm_search_user()
-    {
-        global $wpdb;
-        if (isset($_POST['search'])) {
-            $search = sanitize_text_field($_POST['search']);
 
-            $result = $wpdb->get_var("SELECT distinct(display_name) FROM wp_users WHERE display_name LIKE '%{$search}%' ");
-            if (isset($result)) {
-                echo $result;
-                exit();
-            } else {
-                echo "No data found!";
-                exit();
-            }
-        }
-    }
+  
 
     /**
      * Callback function of activation hook
@@ -274,6 +260,44 @@ class jbm_controller
     }
 
     /**
+     * Getting all registered client
+     *
+     * @since 1.0.0
+     */
+    public function jbm_search_client()
+    {
+        if (isset($_POST['search'])) {
+            $membersArray = get_users('role=client');
+            $output = "<ol>";
+            foreach ($membersArray as $user) {
+                $output .= '<li>' . esc_html($user->display_name) . '</li>';
+            }
+            $output .="</ol>";
+            echo $output;
+            exit();
+        }
+    }
+
+    /**
+     * Getting all registered contractor
+     *
+     * @since 1.0.0
+     */
+    public function jbm_search_contractor()
+    {
+        if (isset($_POST['search'])) {
+            $membersArray = get_users('role=contractor');
+            $output = "<ol>";
+            foreach ($membersArray as $user) {
+                $output .= '<li>' . esc_html($user->display_name) . '</li>';
+            }
+            $output .="</ol>";
+            echo $output;
+            exit();
+        }
+    }
+
+    /**
     * Ajax callback for jobform data
     *
     * @since 1.0.0
@@ -281,6 +305,12 @@ class jbm_controller
     public function jbm_jobform_data()
     {
         if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'jobform-nonce')) {
+            if (!function_exists('wp_generate_attachment_metadata')) {
+                require_once(ABSPATH . 'wp-admin/includes/image.php');
+                require_once(ABSPATH . 'wp-admin/includes/file.php');
+                require_once(ABSPATH . 'wp-admin/includes/media.php');
+            }
+            
             $client     = sanitize_text_field($_POST['client']);
             $contractor = sanitize_text_field($_POST['contractor']);
             $jobname    = sanitize_text_field($_POST['jobname']);
@@ -291,11 +321,16 @@ class jbm_controller
                 'post_status' => 'publish',
                 'post_type'   => 'job'
             );
+
             $insert_data = wp_insert_post($cpt_args);
             update_field('client_name', $client, $insert_data);
             update_field('contractor_name', $contractor, $insert_data);
             update_field('job_description', $jobdesc, $insert_data);
             update_field('price', $price, $insert_data);
+            $attachment_id = media_handle_upload('image', $insert_data);
+            if ($attachment_id > 0) {
+                update_post_meta($insert_data, '_thumbnail_id', $attachment_id);
+            }
         }
     }
 
@@ -306,6 +341,13 @@ class jbm_controller
     */
     public function jbm_job_list()
     {
+        wp_enqueue_script(
+            'job-list',
+            jbm_url.'assets/js/job_list.js',
+            array('jquery'),
+            1.0,
+            true
+        );
         require_once jbm_path.'inc/job-list.php';
     }
 

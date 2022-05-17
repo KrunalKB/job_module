@@ -3,12 +3,12 @@
 global $current_user;
 $role            = $current_user->roles;
 $current_role    = implode($role);
-$client_role     = "administrator";
+$client_role     = "client";
 $contractor_role = "contractor";
 
 if (is_user_logged_in()) {
     ?>
-    <form method="post" class="reg_form" id="regfrm">
+    <form method="post" class="reg_form" id="regfrm" name="reg_form">
     <div class="container">
     <?php
         if ($current_role == $contractor_role) {
@@ -25,18 +25,17 @@ if (is_user_logged_in()) {
         }
     if ($current_role == $client_role) {
         ?>  
-            <label for="contractor"><b><?php echo esc_html('Select contractor'); ?></b></label>
-            <input
-            type="text"
-            placeholder="Select contractor"
-            name="contractor"
-            id="contractor"
-            required
-            />
-            <?php
+              <label for="contractor"><b><?php echo esc_html('Select contractor'); ?></b></label>
+              <input
+              type="text"
+              placeholder="Select contractor"
+              name="contractor"
+              id="contractor"
+              required
+              />
+              <?php
     } ?>
-        <table><tr><td id="searchresult"></td></tr></table>
-        <!-- <div id="searchresult"></div> -->
+        <table id="searchtable"><tr><td ><div id="searchresult"></div></td></tr></table>
         
         <label for="jobname"><b><?php echo esc_html('Job name'); ?></b></label>
         <input
