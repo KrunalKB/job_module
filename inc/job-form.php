@@ -23,6 +23,7 @@ if (is_user_logged_in()) {
             />
             <?php
         }
+        
     if ($current_role == $client_role) {
         ?>  
               <label for="contractor"><b><?php echo esc_html('Select contractor'); ?></b></label>
@@ -33,7 +34,7 @@ if (is_user_logged_in()) {
               id="contractor"
               required
               />
-              <?php
+        <?php
     } ?>
         <table id="searchtable"><tr><td ><div id="searchresult"></div></td></tr></table>
         

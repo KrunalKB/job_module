@@ -1,0 +1,27 @@
+.main-container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+}
+
+#box {
+  margin: 10px;
+  height: 500px;
+  width: 47%;
+  box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
+}
+
+#box p {
+  padding: 10px;
+}
+
+.image {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.image img {
+  border-radius: 10px;
+}

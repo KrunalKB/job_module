@@ -59,12 +59,60 @@ class jbm_controller
         add_action('wp_ajax_jobform_hook', array($this,'jbm_jobform_data'));
         add_action('wp_ajax_search_client_hook', array($this,'jbm_search_client'));
         add_action('wp_ajax_search_contractor_hook', array($this,'jbm_search_contractor'));
+        add_action('wp_ajax_job_listing_hook', array($this,'jbm_job_listing'));
 
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
     }
 
-  
+    public function jbm_job_listing()
+    {
+        global $current_user;
+        $current_user_id = $current_user->ID;
+        $current_author  = $current_user->display_name;
+        $offset = $_POST['offset'];
+        $post_query = new WP_Query(array(
+            'post_type'      => 'job',
+            'posts_per_page' =>  2,
+            'order' => 'ASC',
+            'offset' => $offset
+        ));
+
+        if ($post_query -> have_posts()):
+            while ($post_query -> have_posts()): $post_query -> the_post();
+
+        
+        // if (get_field('client_name') == $current_author) {
+            ?>
+                <!-- <div id="box">
+                    <div class="image">
+                        <img src="<?php //echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
+                    </div>
+                    <p><b><?php //echo esc_html('Job name:'); ?></b> <?php the_title(); ?> </p>
+                    <p><b><?php //echo esc_html('Contractor name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
+                    <p><b><?php //echo esc_html('Job description:'); ?></b> <?php echo get_field('job_description'); ?></p>
+                    <p><b><?php //echo esc_html('Price:'); ?></b> <?php echo get_field('price'); ?> Rs.</p>
+                </div> -->
+            <?php
+        // } 
+        // elseif (get_field('contractor_name') == $current_author) {
+            ?>
+                <div id="box">
+                    <div class="image">
+                        <img src="<?php echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
+                    </div>
+                    <p><b><?php echo esc_html('Job name:'); ?></b> <?php the_title(); ?> </p>
+                    <p><b><?php echo esc_html('Client name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
+                    <p><b><?php echo esc_html('Job description:'); ?></b> <?php echo get_field('job_description'); ?></p>
+                    <p><b><?php echo esc_html('Price:'); ?></b> <?php echo get_field('price'); ?> Rs.</p>
+                </div>
+            <?php
+        // }
+        endwhile;
+        endif;
+        wp_reset_query();
+        exit();
+    }
 
     /**
      * Callback function of activation hook
@@ -342,13 +390,27 @@ class jbm_controller
     public function jbm_job_list()
     {
         wp_enqueue_script(
-            'job-list',
+            'joblist-js',
             jbm_url.'assets/js/job_list.js',
             array('jquery'),
             1.0,
             true
         );
-        require_once jbm_path.'inc/job-list.php';
+        wp_localize_script(
+            'joblist-js',
+            'myVar',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('joblisting-nonce')
+            )
+        );
+        wp_enqueue_style(
+            'joblist-css',
+            jbm_url.'assets/css/job_list.css'
+        );
+        // require_once jbm_path.'inc/job-list.php';
+        // require_once jbm_path.'inc/job-listing.php';
+        require_once jbm_path.'inc/job-list-ajax.php';
     }
 
     /**
