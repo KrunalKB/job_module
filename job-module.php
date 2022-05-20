@@ -69,44 +69,54 @@ class jbm_controller
     {
         global $current_user;
         $current_user_id = $current_user->ID;
-        $current_author  = $current_user->display_name;
+        $current_user_name = $current_user->display_name;
         $offset = $_POST['offset'];
         $post_query = new WP_Query(array(
             'post_type'      => 'job',
-            'posts_per_page' =>  2,
-            'order' => 'ASC',
-            'offset' => $offset
+            'posts_per_page' => -1,
+            'order'          => 'ASC',
+            'offset'         => $offset
         ));
 
         if ($post_query -> have_posts()):
             while ($post_query -> have_posts()): $post_query -> the_post();
-
         
-        // if (get_field('client_name') == $current_author) {
-            ?>
-                <!-- <div id="box">
-                    <div class="image">
-                        <img src="<?php //echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
-                    </div>
-                    <p><b><?php //echo esc_html('Job name:'); ?></b> <?php the_title(); ?> </p>
-                    <p><b><?php //echo esc_html('Contractor name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
-                    <p><b><?php //echo esc_html('Job description:'); ?></b> <?php echo get_field('job_description'); ?></p>
-                    <p><b><?php //echo esc_html('Price:'); ?></b> <?php echo get_field('price'); ?> Rs.</p>
-                </div> -->
-            <?php
-        // } 
-        // elseif (get_field('contractor_name') == $current_author) {
+        // $client_name     = get_field('client_name');
+        // $contractor_name = get_field('contractor_name');
+        
+        // if (!empty($client_name)) {
+        //     $usr = get_users(array('search' =>  get_field('client_name')));
+        // }
+        // foreach ($usr as $user) {
+        //     $client_id = esc_html($user->ID);
+        // }
+
+
+        // if (get_field('client_name') == $current_user_name) {
             ?>
                 <div id="box">
                     <div class="image">
                         <img src="<?php echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
                     </div>
                     <p><b><?php echo esc_html('Job name:'); ?></b> <?php the_title(); ?> </p>
-                    <p><b><?php echo esc_html('Client name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
+                    <p><b><?php echo esc_html('Contractor name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
                     <p><b><?php echo esc_html('Job description:'); ?></b> <?php echo get_field('job_description'); ?></p>
                     <p><b><?php echo esc_html('Price:'); ?></b> <?php echo get_field('price'); ?> Rs.</p>
                 </div>
             <?php
+        // } 
+        // elseif (get_field('contractor_name') == $current_user_name) {
+            ?>
+                <!-- <div id="box">
+                    <div class="image">
+                         <img src="<?php //echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
+                    </div>
+                    <p><b><?php //echo esc_html('Job name:'); ?></b> <?php //the_title(); ?> </p>
+                    <p><b><?php //echo esc_html('Client name:'); ?></b> <?php //echo get_the_author_meta('display_name'); ?></p>
+                    <p><b><?php //echo esc_html('Job description:'); ?></b> <?php //echo get_field('job_description'); ?></p>
+                    <p><b><?php //echo esc_html('Price:'); ?></b> <?php //echo get_field('price'); ?> Rs.</p>
+                </div> -->
+             <?php
         // }
         endwhile;
         endif;
@@ -318,7 +328,7 @@ class jbm_controller
             $membersArray = get_users('role=client');
             $output = "<ol>";
             foreach ($membersArray as $user) {
-                $output .= '<li>' . esc_html($user->display_name) . '</li>';
+                $output .= '<li>' . esc_html($user->display_name)  . '</li>';
             }
             $output .="</ol>";
             echo $output;
@@ -364,6 +374,7 @@ class jbm_controller
             $jobname    = sanitize_text_field($_POST['jobname']);
             $jobdesc    = sanitize_textarea_field($_POST['jobdesc']);
             $price      = sanitize_text_field($_POST['price']);
+            $post_author= sanitize_text_field($_POST['post_author']);
             $cpt_args = array(
                 'post_title'  => $jobname,
                 'post_status' => 'publish',
@@ -375,6 +386,7 @@ class jbm_controller
             update_field('contractor_name', $contractor, $insert_data);
             update_field('job_description', $jobdesc, $insert_data);
             update_field('price', $price, $insert_data);
+            update_field('post_author', $post_author, $insert_data);
             $attachment_id = media_handle_upload('image', $insert_data);
             if ($attachment_id > 0) {
                 update_post_meta($insert_data, '_thumbnail_id', $attachment_id);

@@ -3,6 +3,7 @@
 global $current_user;
 $role            = $current_user->roles;
 $current_role    = implode($role);
+$current_user_id = $current_user->ID;
 $client_role     = "client";
 $contractor_role = "contractor";
 
@@ -36,7 +37,7 @@ if (is_user_logged_in()) {
               />
         <?php
     } ?>
-        <table id="searchtable"><tr><td ><div id="searchresult"></div></td></tr></table>
+        <table id="searchtable"><tr><td ></td></tr></table>
         
         <label for="jobname"><b><?php echo esc_html('Job name'); ?></b></label>
         <input
@@ -71,6 +72,13 @@ if (is_user_logged_in()) {
           id="price"
           required  
         />
+
+        <input 
+          type="hidden"
+          name="post_author"
+          id="post_author"
+          value=<?php echo $current_user_id; ?>
+        >
 
         <button type="submit" class="job_registerbtn" ><?php echo esc_html('Submit'); ?></button>
       </div>
