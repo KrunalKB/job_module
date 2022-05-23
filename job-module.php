@@ -63,61 +63,58 @@ class jbm_controller
 
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
+
+        add_filter('wp_mail_content_type', array($this,'jbm_mail_content_type'));
     }
 
+    public function jbm_mail_content_type()
+    {
+        return 'text/html';
+    }
+
+    /**
+     * Ajax callback function for job list
+     *
+     * @since 1.0.0
+     */
     public function jbm_job_listing()
     {
         global $current_user;
-        $current_user_id = $current_user->ID;
-        $current_user_name = $current_user->display_name;
-        $offset = $_POST['offset'];
+        $current_user_id   = $current_user->ID;
+        $offset            = $_POST['offset'];
         $post_query = new WP_Query(array(
             'post_type'      => 'job',
-            'posts_per_page' => -1,
+            'posts_per_page' => 2,
             'order'          => 'ASC',
-            'offset'         => $offset
+            'offset'         => $offset,
+            'meta_query'     => array(
+                'relation' => 'AND',
+                array(
+                    'key'     => 'user_id',
+                    'value'   => $current_user_id,
+                    'compare' => 'LIKE'
+                ),
+                array(
+                    'key'     => 'user_id',
+                    'value'   => get_field('user_id'),
+                    'compare' => 'LIKE'
+                )
+            )
         ));
 
         if ($post_query -> have_posts()):
-            while ($post_query -> have_posts()): $post_query -> the_post();
-        
-        // $client_name     = get_field('client_name');
-        // $contractor_name = get_field('contractor_name');
-        
-        // if (!empty($client_name)) {
-        //     $usr = get_users(array('search' =>  get_field('client_name')));
-        // }
-        // foreach ($usr as $user) {
-        //     $client_id = esc_html($user->ID);
-        // }
-
-
-        // if (get_field('client_name') == $current_user_name) {
-            ?>
+            while ($post_query -> have_posts()): $post_query -> the_post(); ?>
                 <div id="box">
                     <div class="image">
                         <img src="<?php echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
                     </div>
                     <p><b><?php echo esc_html('Job name:'); ?></b> <?php the_title(); ?> </p>
-                    <p><b><?php echo esc_html('Contractor name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
+                    <p><b><?php echo esc_html('User name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
                     <p><b><?php echo esc_html('Job description:'); ?></b> <?php echo get_field('job_description'); ?></p>
                     <p><b><?php echo esc_html('Price:'); ?></b> <?php echo get_field('price'); ?> Rs.</p>
                 </div>
             <?php
-        // } 
-        // elseif (get_field('contractor_name') == $current_user_name) {
-            ?>
-                <!-- <div id="box">
-                    <div class="image">
-                         <img src="<?php //echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
-                    </div>
-                    <p><b><?php //echo esc_html('Job name:'); ?></b> <?php //the_title(); ?> </p>
-                    <p><b><?php //echo esc_html('Client name:'); ?></b> <?php //echo get_the_author_meta('display_name'); ?></p>
-                    <p><b><?php //echo esc_html('Job description:'); ?></b> <?php //echo get_field('job_description'); ?></p>
-                    <p><b><?php //echo esc_html('Price:'); ?></b> <?php //echo get_field('price'); ?> Rs.</p>
-                </div> -->
-             <?php
-        // }
+            
         endwhile;
         endif;
         wp_reset_query();
@@ -209,6 +206,7 @@ class jbm_controller
             $fname    = filter_var($_POST['fname'], FILTER_SANITIZE_STRING);
             $lname    = filter_var($_POST['lname'], FILTER_SANITIZE_STRING);
             $password = trim($_POST['password']);
+            $verification_hash_key = md5(rand(0, 1000));
 
             $clientdata = array(
                 'user_login' => $username,
@@ -220,6 +218,15 @@ class jbm_controller
             );
 
             $insert_client = wp_insert_user($clientdata);
+            if (!is_wp_error($insert_client)) {
+                $activation_link = home_url('/').'?email='.$email.'&hash='.$verification_hash_key;
+                update_user_meta($insert_client, $username.'activate', 'false');
+                $subject = 'Signup Verification';
+                $message = 'Hello'.$username.'<br/>
+                            Please click on the following link or copy the link and paste it to your browser to activate your profile and Sign in. <br/>'.$activation_link;
+                $headers = 'From: noreply@gmail.com' . "\r\n";
+                wp_mail($email, $subject, $message, $headers);
+            }
         }
     }
 
@@ -375,6 +382,15 @@ class jbm_controller
             $jobdesc    = sanitize_textarea_field($_POST['jobdesc']);
             $price      = sanitize_text_field($_POST['price']);
             $post_author= sanitize_text_field($_POST['post_author']);
+
+            if (!empty($client)) {
+                $get_user = get_users(array('search' =>  $client));
+            } else {
+                $get_user = get_users(array('search' =>  $contractor));
+            }
+            foreach ($get_user as $user) {
+                $user_id = esc_html($user->ID);
+            }
             $cpt_args = array(
                 'post_title'  => $jobname,
                 'post_status' => 'publish',
@@ -386,7 +402,8 @@ class jbm_controller
             update_field('contractor_name', $contractor, $insert_data);
             update_field('job_description', $jobdesc, $insert_data);
             update_field('price', $price, $insert_data);
-            update_field('post_author', $post_author, $insert_data);
+            update_field('author_id', $post_author, $insert_data);
+            update_field('user_id', $user_id, $insert_data);
             $attachment_id = media_handle_upload('image', $insert_data);
             if ($attachment_id > 0) {
                 update_post_meta($insert_data, '_thumbnail_id', $attachment_id);
@@ -413,7 +430,7 @@ class jbm_controller
             'myVar',
             array(
                 'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('joblisting-nonce')
+                'nonce'    => wp_create_nonce('joblisting-nonce')
             )
         );
         wp_enqueue_style(

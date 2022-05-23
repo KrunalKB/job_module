@@ -6,7 +6,6 @@ $current_role    = implode($role);
 $current_user_id = $current_user->ID;
 $client_role     = "client";
 $contractor_role = "contractor";
-
 if (is_user_logged_in()) {
     ?>
     <form method="post" class="reg_form" id="regfrm" name="reg_form">
@@ -37,7 +36,7 @@ if (is_user_logged_in()) {
               />
         <?php
     } ?>
-        <table id="searchtable"><tr><td ></td></tr></table>
+        <table id="searchtable"><tr><td></td></tr></table>
         
         <label for="jobname"><b><?php echo esc_html('Job name'); ?></b></label>
         <input
