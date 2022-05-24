@@ -60,13 +60,68 @@ class jbm_controller
         add_action('wp_ajax_search_client_hook', array($this,'jbm_search_client'));
         add_action('wp_ajax_search_contractor_hook', array($this,'jbm_search_contractor'));
         add_action('wp_ajax_job_listing_hook', array($this,'jbm_job_listing'));
+        // add_action('wp_ajax_client_verify', array($this,'jbm_client_verify'));
 
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
 
+        /* Set mail content type */
         add_filter('wp_mail_content_type', array($this,'jbm_mail_content_type'));
+
+        // add_filter('wp_authenticate_user', array($this,'jbm_check_user_activation', 10, 2));
+
+        // add_filter('query_vars', array($this,'add_query_vars_filter'));
+
+        // add_filter('authenticate', array($this,'jbm_users'), 10, 3);
     }
 
+    
+    // public function jbm_check_user_activation($user)
+    // {
+    //     // if (get_user_meta($user->ID, 'wp_user_level', true) != 10) {
+    //         if (get_user_meta($user->ID, 'permit', true) == 'true') {
+    //             return $user;
+    //         }
+    //     // } 
+    //     else {
+    //         return new WP_Error('Account Not Active...');
+    //     }
+    // }
+    // public function add_query_vars_filter($vars)
+    // {
+    //     $vars[] = "key";
+    //     $vars[] = "user";
+    //     // return $vars;
+    //     // update_option('verification',$vars);
+
+    // }
+      
+    // public function jbm_client_verify()
+    // {
+    //     $abc = get_query_var('email');
+    //     echo $abc;
+    // }
+      
+    // public function jbm_users($user, $username, $password)
+    // {
+    //     $user_obj = get_user_by('login', $username);
+
+    //     if ($username!='') {
+    //         // $value = update_user_meta($user->ID, 'activate', true);
+    //         if (get_user_meta( $user->ID, 'activate' ) == 'false' ) {
+    //             $user = new WP_Error('denied', __("<strong>ERROR</strong>: You need to activate your account.".$value.""));
+    //             remove_action('authenticate', 'wp_authenticate_username_password', 20);
+    //         }
+    //     }
+    //     return $user;
+    // }
+
+
+    /**
+     * Set mail content type
+     *
+     * @since 1.0.0
+     */
     public function jbm_mail_content_type()
     {
         return 'text/html';
@@ -205,8 +260,9 @@ class jbm_controller
             $email    = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
             $fname    = filter_var($_POST['fname'], FILTER_SANITIZE_STRING);
             $lname    = filter_var($_POST['lname'], FILTER_SANITIZE_STRING);
+            $url      = filter_var($_POST['url'], FILTER_SANITIZE_STRING);
             $password = trim($_POST['password']);
-            $verification_hash_key = md5(rand(0, 1000));
+            $hash_key = md5(rand(0, 100));
 
             $clientdata = array(
                 'user_login' => $username,
@@ -219,10 +275,12 @@ class jbm_controller
 
             $insert_client = wp_insert_user($clientdata);
             if (!is_wp_error($insert_client)) {
-                $activation_link = home_url('/').'?email='.$email.'&hash='.$verification_hash_key;
-                update_user_meta($insert_client, $username.'activate', 'false');
+                // $activation_link = esc_url(home_url('/').'?email='.$email.'&hash='.$hash_key);
+                $activation_link = add_query_arg(array( 'key' => $hash_key, 'user' => $username ), $url);
+                add_user_meta($insert_client, 'activate', $hash_key);
+                add_user_meta($insert_client, 'permit', 'false');
                 $subject = 'Signup Verification';
-                $message = 'Hello'.$username.'<br/>
+                $message = 'Hello &nbsp;'.$username.'<br/>
                             Please click on the following link or copy the link and paste it to your browser to activate your profile and Sign in. <br/>'.$activation_link;
                 $headers = 'From: noreply@gmail.com' . "\r\n";
                 wp_mail($email, $subject, $message, $headers);

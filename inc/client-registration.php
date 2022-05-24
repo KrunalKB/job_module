@@ -1,4 +1,23 @@
 <?php
+if (isset($_GET['key']) && isset($_GET['user'])) {
+    $key        = $_GET['key'];
+    $user       = $_GET['user'];
+    $usr_detail = get_user_by('login', $user);
+    $user_id    = $usr_detail->ID;
+    $hash_key   = get_user_meta($user_id, 'activate', true);
+    $permit     = get_user_meta($user_id, 'permit', true);
+    if ($hash_key == $key) {
+        if ($permit == 'false') {
+            echo "<h4 style='color:red'>Your account has been activated.</h4>";
+            update_user_meta($user_id, 'permit', 'true');
+        } else {
+            echo "<h4 style='color:red'>The url is either invalid or you already have activated your account.</h4>";
+        }
+    } else {
+        echo "<h4 style='color:red'>Invalid approach, please use the link that has been send to your email.</h4>";
+    }
+}
+
 ?>
     <form method="post" class="reg_form" id="regfrm">
       <div class="container">
@@ -50,6 +69,8 @@
           required
         />
         <hr />
+
+        <input type="hidden" value="<?php echo get_permalink(); ?>" id="url">
 
         <button type="submit" class="cl_registerbtn" ><?php echo esc_html('Register'); ?></button>
       </div>

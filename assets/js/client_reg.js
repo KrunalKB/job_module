@@ -5,6 +5,7 @@
      var fname    = $("#fname").val();
      var lname    = $("#lname").val();
      var password = $("#password").val();
+     var url = $("#url").val();
     $.ajax({
       url : myVar.ajax_url,
       type: "POST",
@@ -15,7 +16,8 @@
         email   : email,
         fname   : fname,
         lname   : lname,
-        password: password
+        password: password,
+        url : url
       },
       success: function (response) {
         alert("Registration successfull");
@@ -26,4 +28,22 @@
     e.preventDefault();
     client_reg();
   });
+
 })(jQuery);
+
+// (function($){
+//   $("#username").on("click",function(){
+//     $.ajax({
+//     url: myVar.ajax_url,
+//     type: "GET",
+//     data:{
+//       action : "client_verify",
+//       // nonce : myVar.nonce,
+//     },
+//     success: function(response){
+//       console.log(response);
+//     }
+//   });
+//   })
+    
+// })(jQuery);
