@@ -14,6 +14,6 @@ if (is_user_logged_in()) {
         <?php
     }
 } else {
-    echo esc_html('No data available!');
+    echo esc_html("No data available. You need to signin first!");
 }
 ?>

@@ -83,5 +83,7 @@ if (is_user_logged_in()) {
       </div>
     </form>
   <?php
+}else{
+  echo esc_html("No data available. You need to signin first!");
 }
 ?>

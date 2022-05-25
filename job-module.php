@@ -47,6 +47,9 @@ class jbm_controller
         /* Create shortcode for contractor registration form */
         add_shortcode('contractor_reg', array($this,'jbm_contractor_reg'));
 
+        /* Create shortcode for user registration */
+        add_shortcode('user-registration', array($this,'jbm_user_registration'));
+
         /* Create shortcode for job creation form */
         add_shortcode('job_form', array($this,'jbm_job_form'));
 
@@ -54,13 +57,13 @@ class jbm_controller
         add_shortcode('job_list', array($this,'jbm_job_list'));
 
         /* Execute ajax hook */
+        add_action('wp_ajax_user_registration_hook', array($this,'jbm_register_user'));
         add_action('wp_ajax_client_hook', array($this,'jbm_register_client'));
         add_action('wp_ajax_contractor_hook', array($this,'jbm_register_contractor'));
         add_action('wp_ajax_jobform_hook', array($this,'jbm_jobform_data'));
         add_action('wp_ajax_search_client_hook', array($this,'jbm_search_client'));
         add_action('wp_ajax_search_contractor_hook', array($this,'jbm_search_contractor'));
         add_action('wp_ajax_job_listing_hook', array($this,'jbm_job_listing'));
-        // add_action('wp_ajax_client_verify', array($this,'jbm_client_verify'));
 
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
@@ -68,23 +71,95 @@ class jbm_controller
         /* Set mail content type */
         add_filter('wp_mail_content_type', array($this,'jbm_mail_content_type'));
 
-        // add_filter('wp_authenticate_user', array($this,'jbm_check_user_activation', 10, 2));
+
+        // add_filter('authenticate', array($this,'jbm_check_user_activation', 10, 2));
+        // remove_action('authenticate', array($this, 'wp_authenticate_username_password'), 20);
+        // remove_action('authenticate', array($this, 'wp_authenticate_email_password'), 20);
 
         // add_filter('query_vars', array($this,'add_query_vars_filter'));
-
-        // add_filter('authenticate', array($this,'jbm_users'), 10, 3);
     }
 
+    /**
+     * Ajax callback for user registration
+     */
+    public function jbm_register_user()
+    {
+        if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'user-registration-nonce')) {
+            $username = $_POST['username'];
+            echo $username;
+        }
+    }
+
+    /**
+     * Shortcode for user registration
+     *
+     * @since 1.0.0
+     */
+    public function jbm_user_registration($params, $content)
+    {
+        wp_enqueue_script(
+            'jquery-cdn',
+            'https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js',
+        );
+
+        wp_enqueue_script(
+            'jquery-validation',
+            'http://ajax.aspnetcdn.com/ajax/jquery.validate/1.14.0/jquery.validate.min.js',
+        );
+
+        wp_enqueue_script(
+            'user-js',
+            jbm_url . 'assets/js/user_registration.js',
+            array('jquery'),
+            1.0,
+            true
+        );
+
+        wp_localize_script(
+            'user-js',
+            'myVar',
+            array(
+                'ajax_url' => admin_url('admin-ajax.php'),
+                'nonce'    => wp_create_nonce('user-registration-nonce')
+            )
+        );
+
+        wp_enqueue_style(
+            'user-css',
+            jbm_url . 'assets/css/user_registration.css'
+        );
+
+        $values = shortcode_atts(
+            array(
+                "user" => ""
+            ),
+            $params,
+            'user-registration'
+        );
+        if ($values['user'] == 'client') {
+            require_once jbm_path.'inc/client-registration.php';
+        } elseif ($values['user'] == 'contractor') {
+            require_once jbm_path.'inc/contractor-regitration.php';
+        } else {
+            esc_html_e("Please add user role in shortcode!");
+        }
+    }
     
-    // public function jbm_check_user_activation($user)
+    // public function jbm_check_user_activation($user, $username, $password)
     // {
+    //     $user = get_user_by('login', $username);
+    //     $cred = get_user_meta($user->ID, 'permit', true);
     //     // if (get_user_meta($user->ID, 'wp_user_level', true) != 10) {
-    //         if (get_user_meta($user->ID, 'permit', true) == 'true') {
+    //     if (!empty($cred)) {
+    //         if ($cred == 'false') {
     //             return $user;
+    //         } else {
+    //             return new WP_Error('Account Not Active...');
     //         }
-    //     // } 
+    //     }
+    //     // }
     //     else {
-    //         return new WP_Error('Account Not Active...');
+    //         return $user;
     //     }
     // }
     // public function add_query_vars_filter($vars)
