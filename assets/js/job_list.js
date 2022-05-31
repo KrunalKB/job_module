@@ -37,6 +37,7 @@
       },
     });
   });
+
   var page = 1;
   $("#loadMore").on("click", function () {
     $.ajax({
@@ -54,6 +55,35 @@
           $("#loadMore").fadeOut("slow");
           $("#msg").html("No more data available to read!");
         }
+      },
+    });
+  });
+})(jQuery);
+
+(function ($) {
+  $(document).on("click", "input[type='submit']", function () {
+    let status = window.confirm("Are you sure to want to approve this job");
+    if (status == true) {
+      $(this).css("background-color", "	#008000");
+      $(this).attr("value", "approved");
+      $(this).attr("disabled", true);
+    } else {
+      $(this).css("background-color", "#FF0000");
+      $(this).attr("value", "rejected");
+      $(this).attr("disabled", true);
+    }
+    var updateVal = $(this).val();
+    var elementId = $(this).attr("id");
+    $.ajax({
+      url: myVar.ajax_url,
+      type: "POST",
+      data: {
+        action: "job_status",
+        updateVal: updateVal,
+        elementId: elementId,
+      },
+      success: function (data) {
+        // alert(data);
       },
     });
   });

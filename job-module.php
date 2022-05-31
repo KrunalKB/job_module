@@ -65,6 +65,7 @@ class jbm_controller
         add_action('wp_ajax_search_client_hook', array($this,'jbm_search_client'));
         add_action('wp_ajax_search_contractor_hook', array($this,'jbm_search_contractor'));
         add_action('wp_ajax_job_listing_hook', array($this,'jbm_job_listing'));
+        add_action('wp_ajax_job_status', array($this,'jbm_job_status'));
 
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
@@ -74,6 +75,15 @@ class jbm_controller
 
         add_action('wp', array($this,'jbm_my_init'));
         add_filter('wp_authenticate_user', array($this,'jbm_authenticate_user'));
+    }
+
+    public function jbm_job_status()
+    {
+        if (isset($_POST['updateVal'])) {
+            $updateVal = $_POST['updateVal'];
+            $elementId = $_POST['elementId'];
+            update_field('job_status', $updateVal, $elementId);
+        }
     }
 
     /**
@@ -249,8 +259,11 @@ class jbm_controller
     public function jbm_job_listing()
     {
         global $current_user;
-        $current_user_id   = $current_user->ID;
-        $offset            = $_POST['offset'];
+        global $post;
+        $role            = $current_user->roles;
+        $current_role    = implode($role);
+        $current_user_id = $current_user->ID;
+        $offset          = $_POST['offset'];
         $post_query = new WP_Query(array(
             'post_type'      => 'job',
             'posts_per_page' => 2,
@@ -272,7 +285,19 @@ class jbm_controller
         ));
 
         if ($post_query -> have_posts()):
-            while ($post_query -> have_posts()): $post_query -> the_post(); ?>
+            while ($post_query -> have_posts()): $post_query -> the_post();
+
+        $jobStatus = get_field('job_status');
+        if ($jobStatus == 'approved') {
+            $btnStatus = 'disabled';
+            $btnColor  = '#008000';
+        } elseif ($jobStatus == 'rejected') {
+            $btnStatus = 'disabled';
+            $btnColor  = '#FF0000';
+        } else {
+            $btnStatus = '';
+            $btnColor  = '#008cff';
+        } ?>
                 <div id="box">
                     <div class="image">
                         <img src="<?php echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
@@ -281,9 +306,13 @@ class jbm_controller
                     <p><b><?php echo esc_html('User name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
                     <p><b><?php echo esc_html('Job description:'); ?></b> <?php echo get_field('job_description'); ?></p>
                     <p><b><?php echo esc_html('Price:'); ?></b> <?php echo get_field('price'); ?> Rs.</p>
-                    <p><b><?php echo esc_html('Status:'); ?></b> <button id="postStatus" class="btn btn-danger" data-toggle="modal" data-target="#exampleModal"><?php echo get_field('job_status'); ?></button></p>
+                    <?php
+                    if ($current_role == 'contractor') {
+                        ?>
+                        <p><b><?php echo esc_html('Status:'); ?></b> <input type="submit" value="<?php echo get_field('job_status'); ?>" id="<?php echo $post->ID; ?>" style="background-color:<?php echo $btnColor; ?>" <?php echo $btnStatus; ?>></p>
+                        <?php
+                    } ?>
                 </div>
-
             <?php
             
         endwhile;
@@ -582,7 +611,7 @@ class jbm_controller
             update_field('price', $price, $insert_data);
             update_field('author_id', $post_author, $insert_data);
             update_field('user_id', $user_id, $insert_data);
-            update_field('job_status', 'pending', $insert_data);
+            update_field('job_status', 'requested', $insert_data);
             $attachment_id = media_handle_upload('image', $insert_data);
             if ($attachment_id > 0) {
                 update_post_meta($insert_data, '_thumbnail_id', $attachment_id);
@@ -616,10 +645,10 @@ class jbm_controller
             'joblist-css',
             jbm_url.'assets/css/job_list.css'
         );
-        wp_enqueue_style('jbm_bootstrap', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css');
-        wp_enqueue_script('boot1', 'https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.slim.min.js', 1.0, true);
-        wp_enqueue_script('boot2', 'https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js', 1.0, true);
-        wp_enqueue_script('boot2', 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js', 1.0, true);
+        // wp_enqueue_style('jbm_bootstrap', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css');
+        // wp_enqueue_script('boot1', 'https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.slim.min.js', 1.0, true);
+        // wp_enqueue_script('boot2', 'https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js', 1.0, true);
+        // wp_enqueue_script('boot2', 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js', 1.0, true);
 
         // require_once jbm_path.'inc/job-list.php';
         // require_once jbm_path.'inc/job-listing.php';

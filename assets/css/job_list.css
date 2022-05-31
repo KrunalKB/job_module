@@ -30,8 +30,9 @@
   background-color: black !important;
 }
 
-/* #postStatus {
-  height: 30px !important;
-  width: 100px !important;
-  padding: 10px !important;
-} */
+input[type="submit"] {
+  /* background-color: #000; */
+  /* background-color: #008cff; */
+  height: 30px;
+  padding: 5px !important;
+}
