@@ -7,7 +7,7 @@
 
 #box {
   margin: 10px;
-  height: 500px;
+  height: 550px;
   width: 47%;
   box-shadow: rgba(0, 0, 0, 0.24) 0px 3px 8px;
 }
@@ -25,3 +25,13 @@
 .image img {
   border-radius: 10px;
 }
+
+#loadMore {
+  background-color: black !important;
+}
+
+/* #postStatus {
+  height: 30px !important;
+  width: 100px !important;
+  padding: 10px !important;
+} */

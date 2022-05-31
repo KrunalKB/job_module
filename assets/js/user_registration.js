@@ -7,6 +7,7 @@ $.validator.addMethod(
 );
 
 $(document).ready(function () {
+  $(".loader").hide();
   $("#regfrm").validate({
     rules: {
       username: {
@@ -56,18 +57,29 @@ $(document).ready(function () {
         required: "Please enter bussiness number",
       },
     },
+
     submitHandler: function (form) {
+      $(".registerbtn").css({
+        "background-color": "#cccccc",
+        color: "#808080",
+      });
+      $(".loader").show();
       var form_data = new FormData(form);
-      form_data.append("action", "user_registration_hook");
-      form_data.append("nonce", myVar.nonce);
+      form_data.append("action", "user_hook");
+      form_data.append("nonce", myLink.nonce);
       $.ajax({
-        url: myVar.ajax_url,
+        url: myLink.ajax_link,
         type: "POST",
         contentType: false,
         processData: false,
         data: form_data,
         success: function (response) {
-          console.log(response);
+          $(".registerbtn").css({
+            "background-color": "#0170b9",
+            color: "#fff",
+          });
+          $(".loader").hide();
+          $(".msg").html(response);
         },
       });
     },

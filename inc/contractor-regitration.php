@@ -1,5 +1,7 @@
 <?php
-if (!is_user_logged_in()) {
+if (is_user_logged_in()) {
+    esc_html_e("You are already logged in!");
+} else {
     ?>
     <form method="post" class="reg_form" id="regfrm">
       <div class="container">
@@ -62,21 +64,30 @@ if (!is_user_logged_in()) {
 
         <label><b><?php echo esc_html('Bussiness number'); ?></b></label>
         <input
-          type="text"
+          type="number"
           placeholder="Enter Bussiness number"
           name="buss_phone"
           id="buss_phone"
         />
         <label for="buss_phone" class="error"></label><br><br>
+        <div class="g-recaptcha" data-sitekey="6Lf1lCIgAAAAAE9vEUKb8sMfF2t4Oagwpz35jaf1"></div><br>
 
         <hr />
 
         <button type="submit" class="registerbtn"><?php echo esc_html('Register'); ?></button>
+        
+        <img 
+            src="<?php echo plugin_dir_url(__FILE__).'images/load.gif' ?>" 
+            class="loader" 
+            alt="Loader"
+            height=25 
+            width=25 
+            style="margin-left:10px;"
+        >
+        <br>
+        <div class="msg"></div>
       </div>
     </form>
-
-<?php
-} else {
-    esc_html_e("You are already logged in!");
+  <?php
 }
 ?>

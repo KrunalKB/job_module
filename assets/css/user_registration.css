@@ -40,3 +40,8 @@ hr {
 .error {
   color: #ff0000;
 }
+
+.msg {
+  color: rgb(0, 196, 0);
+  font-size: 20px;
+}

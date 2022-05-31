@@ -6,71 +6,72 @@ $current_role    = implode($role);
 $current_user_id = $current_user->ID;
 $client_role     = "client";
 $contractor_role = "contractor";
-if (is_user_logged_in()) {
+if (is_user_logged_in() && (($current_role == $client_role)||($current_role == $contractor_role))) {
     ?>
     <form method="post" class="reg_form" id="regfrm" name="reg_form">
     <div class="container">
     <?php
         if ($current_role == $contractor_role) {
             ?>
-            <label for="client"><b><?php echo esc_html('Select client'); ?></b></label>
+            <label><b><?php echo esc_html('Select client'); ?></b></label>
             <input
             type="text"
             placeholder="Select client"
             name="client"
             id="client"
-            required
             />
+            <label for="client" class="error"></label><br>
             <?php
         }
         
     if ($current_role == $client_role) {
         ?>  
-              <label for="contractor"><b><?php echo esc_html('Select contractor'); ?></b></label>
+              <label><b><?php echo esc_html('Select contractor'); ?></b></label>
               <input
               type="text"
               placeholder="Select contractor"
               name="contractor"
               id="contractor"
-              required
               />
+              <label for="contractor" class="error"></label><br>
         <?php
     } ?>
         <table id="searchtable"><tr><td></td></tr></table>
         
-        <label for="jobname"><b><?php echo esc_html('Job name'); ?></b></label>
+        <label><b><?php echo esc_html('Job name'); ?></b></label>
         <input
           type="text"
           placeholder="Enter job name"
           name="jobname"
           id="jobname"
-          required
         />
+        <label for="jobname" class="error"></label><br>
 
-        <label for="jobdesc"><b><?php echo esc_html('Job description'); ?></b></label>
+        <label><b><?php echo esc_html('Job description'); ?></b></label>
         <textarea 
             name="jobdesc" 
             id="jobdesc" 
             cols="30" 
             rows="3">
         </textarea>
+        <label for="jobdesc" class="error"></label><br>
 
-        <label for="image"><b><?php echo esc_html('Select image'); ?></b></label>
+        <label><b><?php echo esc_html('Select image'); ?></b></label>
         <input
           type="file"
           name="image"
           id="image"
-          required
         />
+        <label for="image" class="error"></label><br>
 
-        <label for="price"><b><?php echo esc_html('Price'); ?></b></label>
+        <label><b><?php echo esc_html('Price'); ?></b></label>
         <input
           type="number"
           placeholder="Enter price"
           name="price"
           id="price"
-          required  
         />
+        <label for="price" class="error"></label><br><br>
 
         <input 
           type="hidden"
@@ -80,10 +81,19 @@ if (is_user_logged_in()) {
         >
 
         <button type="submit" class="job_registerbtn" ><?php echo esc_html('Submit'); ?></button>
+        <img 
+            src="<?php echo plugin_dir_url(__FILE__).'images/load.gif' ?>" 
+            class="loader" 
+            alt="Loader"
+            height=25 
+            width=25 
+            style="margin-left:10px;"
+        >
+        <div class="msg"></div>
       </div>
     </form>
   <?php
-}else{
-  echo esc_html("No data available. You need to signin first!");
-}
+} else {
+        echo esc_html("No data available! You need to signin as a client or contractor to create job.");
+    }
 ?>

@@ -1,25 +1,9 @@
 <?php
-if (isset($_GET['key']) && isset($_GET['user'])) {
-    $key        = $_GET['key'];
-    $user       = $_GET['user'];
-    $usr_detail = get_user_by('login', $user);
-    $user_id    = $usr_detail->ID;
-    $hash_key   = get_user_meta($user_id, 'activate', true);
-    $permit     = get_user_meta($user_id, 'permit', true);
-    if ($hash_key == $key) {
-        if ($permit == 'false') {
-            echo "<h4 style='color:red'>Your account has been activated.</h4>";
-            update_user_meta($user_id, 'permit', 'true');
-        } else {
-            echo "<h4 style='color:red'>The url is either invalid or you already have activated your account.</h4>";
-        }
-    } else {
-        echo "<h4 style='color:red'>Invalid approach, please use the link that has been send to your email.</h4>";
-    }
-}
-if (!is_user_logged_in()) {
+if (is_user_logged_in()) {
+    esc_html_e("You are already logged in!");
+} else {
     ?>
-    <form method="post" class="reg_form" id="regfrm">
+    <form method="post" action="?" class="reg_form" id="regfrm" name="reg_form">
       <div class="container">
         <p><?php echo esc_html('Please fill in this form to create an account.'); ?></p>
         <hr />
@@ -68,16 +52,26 @@ if (!is_user_logged_in()) {
           id="password"
         />
         <label for="password" class="error"></label><br><br>
-        <hr />
+
+        <div class="g-recaptcha" data-sitekey="6Lf1lCIgAAAAAE9vEUKb8sMfF2t4Oagwpz35jaf1"></div><br>
+        <hr/>
 
         <input type="hidden" value="<?php echo get_permalink(); ?>" id="url">
 
         <button type="submit" class="registerbtn" ><?php echo esc_html('Register'); ?></button>
+
+        <img 
+            src="<?php echo plugin_dir_url(__FILE__).'images/load.gif' ?>" 
+            class="loader" 
+            alt="Loader"
+            height=25 
+            width=25 
+            style="margin-left:10px;"
+        >
+        <br>
+        <div class="msg"></div>
       </div>
     </form>
-
-<?php
-} else {
-        esc_html_e("You are already logged in!");
-    }
+  <?php
+}
 ?>
