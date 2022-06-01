@@ -62,10 +62,13 @@ class jbm_controller
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
 
-        /* Set mail content type */
+        /* Filter hook to set mail content type */
         add_filter('wp_mail_content_type', array($this,'jbm_mail_content_type'));
 
-        add_action('wp', array($this,'jbm_my_init'));
+        /* Action hook to verify activation link */
+        add_action('wp', array($this,'jbm_verify_link'));
+
+        /* Filter hook to authenticate user */
         add_filter('wp_authenticate_user', array($this,'jbm_authenticate_user'));
     }
 
@@ -99,7 +102,7 @@ class jbm_controller
                     contractor_id varchar(15) NOT NULL,
                     job_id varchar(15) NOT NULL,
                     job_status varchar(15) NOT NULL,
-                    notification_text varchar(60) NOT NULL,
+                    notification_text varchar(200) NOT NULL,
                     notification_status varchar(60) NOT NULL,
                     PRIMARY KEY (id) 
                 )";
@@ -189,6 +192,8 @@ class jbm_controller
 
     /**
      * Ajax callback for user registration
+     *
+     * @since 1.0.0
      */
     public function jbm_register_user()
     {
@@ -252,7 +257,7 @@ class jbm_controller
     /**
      * For email verification
      */
-    public function jbm_my_init()
+    public function jbm_verify_link()
     {
         if (isset($_GET['user']) && isset($_GET['key'])) {
             $key        = $_GET['key'];
@@ -279,6 +284,8 @@ class jbm_controller
      *
      * @param WP_User $user
      * @return void
+     *
+     * @since 1.0.0
      */
     public function jbm_authenticate_user(WP_User $user)
     {
@@ -513,17 +520,43 @@ class jbm_controller
         exit();
     }
 
+    /**
+     * To update job status and insert data into custom table
+     *
+     * @since 1.0.0
+     */
     public function jbm_job_status()
     {
         if (isset($_POST['updateVal'])) {
             $updateVal = $_POST['updateVal'];
-            $elementId = $_POST['elementId'];
-            update_field('job_status', $updateVal, $elementId);
+            $jobID     = $_POST['elementId'];
+            update_field('job_status', $updateVal, $jobID);
         }
+        global $wpdb;
+        $client_id     = get_field('author_id', $jobID);
+        $contractor_id = get_field('user_id', $jobID);
+        $user          = get_user_by('ID', $contractor_id);
+        $user_name     = $user->display_name;
+        $job_status    = get_field('job_status', $jobID);
+        $job_title     = get_the_title($jobID);
+
+        $notification_text   = "Job name $job_title is $job_status by $user_name";
+        $notification_status = 0;
+        
+        $table = $wpdb->prefix.'job_notification';
+        $data = array(
+            'client_id'           => $client_id,
+            'contractor_id'       => $contractor_id,
+            'job_id'              => $jobID,
+            'job_status'          => $job_status,
+            'notification_text'   => $notification_text,
+            'notification_status' => $notification_status
+        );
+        $wpdb->insert($table, $data);
     }
 
     /**
-     * Create custom post type of job
+     * Create custom post type "job"
      *
      * @since 1.0.0
      */

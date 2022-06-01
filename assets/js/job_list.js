@@ -83,8 +83,11 @@
         elementId: elementId,
       },
       success: function (data) {
-        // alert(data);
+        location.reload();
       },
     });
+  });
+  $(document).on("click", ".closebtn", function () {
+    this.parentElement.style.display='none';
   });
 })(jQuery);
