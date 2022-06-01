@@ -41,12 +41,6 @@ class jbm_controller
         /* Deactivate hook fires when plugin deactivate */
         register_deactivation_hook(jbm_file, array($this,'jbm_deactivate'));
 
-        /* Create shortcode for client registration form */
-        add_shortcode('client_reg', array($this,'jbm_client_reg'));
-
-        /* Create shortcode for contractor registration form */
-        add_shortcode('contractor_reg', array($this,'jbm_contractor_reg'));
-
         /* Create shortcode for user registration */
         add_shortcode('user-registration', array($this,'jbm_user_registration'));
 
@@ -59,8 +53,6 @@ class jbm_controller
         /* Execute ajax hook */
         add_action('wp_ajax_user_hook', array($this,'jbm_register_user'));
         add_action('wp_ajax_nopriv_user_hook', array($this,'jbm_register_user'));
-        add_action('wp_ajax_client_hook', array($this,'jbm_register_client'));
-        add_action('wp_ajax_contractor_hook', array($this,'jbm_register_contractor'));
         add_action('wp_ajax_jobform_hook', array($this,'jbm_jobform_data'));
         add_action('wp_ajax_search_client_hook', array($this,'jbm_search_client'));
         add_action('wp_ajax_search_contractor_hook', array($this,'jbm_search_contractor'));
@@ -77,119 +69,73 @@ class jbm_controller
         add_filter('wp_authenticate_user', array($this,'jbm_authenticate_user'));
     }
 
-    public function jbm_job_status()
-    {
-        if (isset($_POST['updateVal'])) {
-            $updateVal = $_POST['updateVal'];
-            $elementId = $_POST['elementId'];
-            update_field('job_status', $updateVal, $elementId);
-        }
-    }
-
     /**
-     * Authenticate user
+     * Callback function of activation hook
      *
-     * @param WP_User $user
-     * @return void
+     * Register two roles of 'Client' and 'Contractor' when plugin activate.
+     *
+     * @since 1.0.0
      */
-    public function jbm_authenticate_user(WP_User $user)
+    public function jbm_activate()
     {
-        $activation_status = get_user_meta($user->ID, 'permit', true);
-        if ($activation_status) {
-            if ($activation_status == 'false') {
-                $message = esc_html__('User not verified.Please click the link in the activation email that has been sent to you.', 'jbm');
-                return new WP_Error('user_not_verified', $message);
-            }
+        global $wp_roles;
+        $total_role      = $wp_roles->get_names();
+        $subscriber_role = $wp_roles->get_role('subscriber');
+
+   
+        if (!in_array('Client', $total_role)) {
+            add_role('client', __('Client'), $subscriber_role->capabilities);
         }
-        return $user;
+        if (!in_array('Contractor', $total_role)) {
+            add_role('contractor', __('Contractor'), $subscriber_role->capabilities);
+        }
+
+        global $wpdb;
+        $db_table_name = $wpdb->prefix . 'job_notification';  // table name
+        if ($wpdb->get_var("SHOW TABLES LIKE '$db_table_name'") != $db_table_name) {
+            $sql = "CREATE TABLE " . $db_table_name . " (
+                    id int(11) NOT NULL auto_increment,
+                    client_id varchar(15) NOT NULL,
+                    contractor_id varchar(15) NOT NULL,
+                    job_id varchar(15) NOT NULL,
+                    job_status varchar(15) NOT NULL,
+                    notification_text varchar(60) NOT NULL,
+                    notification_status varchar(60) NOT NULL,
+                    PRIMARY KEY (id) 
+                )";
+        }
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+        dbDelta($sql); // create query
     }
 
     /**
-     * For email verification
+     * Callback function of deactivation hook
+     *
+     * Remove roles of 'Client' and  'Contractor' when plugin deactivate.
+     *
+     * @since 1.0.0
      */
-    public function jbm_my_init()
+    public function jbm_deactivate()
     {
-        if (isset($_GET['user']) && isset($_GET['key'])) {
-            $key        = $_GET['key'];
-            $user       = $_GET['user'];
-            $usr_detail = get_user_by('login', $user);
-            $user_id    = $usr_detail->ID;
-            $hash_key   = get_user_meta($user_id, 'activate', true);
-            $permit     = get_user_meta($user_id, 'permit', true);
-            if ($hash_key == $key) {
-                if ($permit == 'false') {
-                    update_user_meta($user_id, 'permit', 'true');
-                    echo "<h4 style='color:green'>Hurray! Your account has been activated.</h4>";
-                } else {
-                    echo "<h4 style='color:red'>The url is either invalid or you already have activated your account.</h4>";
-                }
-            } else {
-                echo "<h4 style='color:red'>Invalid approach, please use the link that has been send to your email.</h4>";
-            }
+        global $wp_roles;
+        $total_role = $wp_roles->get_names();
+
+        if (in_array('Client', $total_role)) {
+            remove_role('client');
+        }
+        if (in_array('Contractor', $total_role)) {
+            remove_role('contractor');
         }
     }
 
     /**
-     * Ajax callback for user registration
+     * Set mail content type
+     *
+     * @since 1.0.0
      */
-    public function jbm_register_user()
+    public function jbm_mail_content_type()
     {
-        if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'user-registration-nonce')) {
-            $secret_key   = '6Lf1lCIgAAAAADLiOoq_oVg1WXi9OnK-_7xjB62h';
-            $response_key = $_POST['g-recaptcha-response'];
-            $url          = "https://www.google.com/recaptcha/api/siteverify?secret=$secret_key&response=$response_key";
-            $responseData = file_get_contents($url);
-            $response     = json_decode($responseData);
-            if ($response->success) {
-                $username = sanitize_text_field($_POST['username']);
-                $email    = sanitize_email($_POST['email']);
-                $fname    = sanitize_text_field($_POST['fname']);
-                $lname    = sanitize_text_field($_POST['lname']);
-                // $url      = sanitize_text_field($_POST['url']);
-                $password = trim($_POST['password']);
-                $hash_key = rand(0, 1000);
-
-                if (isset($_POST['buss_name']) && isset($_POST['buss_phone'])) {
-                    $buss_name  = sanitize_text_field($_POST['buss_name']);
-                    $buss_phone = sanitize_text_field($_POST['buss_phone']);
-                    $role       = "contractor";
-                } else {
-                    $role = "client";
-                }
-
-                $userdata = array(
-                    'user_login' => $username,
-                    'user_email' => $email,
-                    'user_pass'  => $password,
-                    'first_name' => $fname,
-                    'last_name'  => $lname,
-                    'role'       => $role
-                );
-
-                $insert_user = wp_insert_user($userdata);
-                if ($role == "contractor") {
-                    $user_data = get_user_by('login', $username);
-                    add_user_meta($user_data->ID, 'bussiness-name', $buss_name);
-                    add_user_meta($user_data->ID, 'bussiness-number', $buss_phone);
-                }
-                if (!is_wp_error($insert_user)) {
-                    $activation_link = esc_url(home_url('/').'?user='.$username.'&key='.$hash_key);
-                    add_user_meta($insert_user, 'activate', $hash_key);
-                    add_user_meta($insert_user, 'permit', 'false');
-                    $subject = 'Signup Verification';
-                    $message = 'Hello &nbsp;'.$username.'<br/>
-                            Please click on the following link or copy the link and paste it to your browser to activate your profile and Sign in. <br/>'.$activation_link;
-                    $headers = 'From: noreply@gmail.com' . "\r\n";
-                    wp_mail($email, $subject, $message, $headers);
-                }
-                // echo "Registration completed successfully!";
-                echo "Account activation link has been sent to your email. Please verify and signin!";
-                exit();
-            } else {
-                echo "Invalid captcha, Please try again!";
-                exit();
-            }
-        }
+        return 'text/html';
     }
 
     /**
@@ -242,260 +188,108 @@ class jbm_controller
     }
 
     /**
-     * Set mail content type
-     *
-     * @since 1.0.0
+     * Ajax callback for user registration
      */
-    public function jbm_mail_content_type()
+    public function jbm_register_user()
     {
-        return 'text/html';
-    }
+        if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'user-registration-nonce')) {
+            $secret_key   = '6Lf1lCIgAAAAADLiOoq_oVg1WXi9OnK-_7xjB62h';
+            $response_key = $_POST['g-recaptcha-response'];
+            $url          = "https://www.google.com/recaptcha/api/siteverify?secret=$secret_key&response=$response_key";
+            $responseData = file_get_contents($url);
+            $response     = json_decode($responseData);
+            if ($response->success) {
+                $username = sanitize_text_field($_POST['username']);
+                $email    = sanitize_email($_POST['email']);
+                $fname    = sanitize_text_field($_POST['fname']);
+                $lname    = sanitize_text_field($_POST['lname']);
+                $password = trim($_POST['password']);
+                $hash_key = rand(0, 1000);
 
-    /**
-     * Ajax callback function for job list
-     *
-     * @since 1.0.0
-     */
-    public function jbm_job_listing()
-    {
-        global $current_user;
-        global $post;
-        $role            = $current_user->roles;
-        $current_role    = implode($role);
-        $current_user_id = $current_user->ID;
-        $offset          = $_POST['offset'];
-        $post_query = new WP_Query(array(
-            'post_type'      => 'job',
-            'posts_per_page' => 2,
-            'order'          => 'ASC',
-            'offset'         => $offset,
-            'meta_query'     => array(
-                'relation' => 'AND',
-                array(
-                    'key'     => 'user_id',
-                    'value'   => $current_user_id,
-                    'compare' => 'LIKE'
-                ),
-                array(
-                    'key'     => 'user_id',
-                    'value'   => get_field('user_id'),
-                    'compare' => 'LIKE'
-                )
-            )
-        ));
+                if (isset($_POST['buss_name']) && isset($_POST['buss_phone'])) {
+                    $buss_name  = sanitize_text_field($_POST['buss_name']);
+                    $buss_phone = sanitize_text_field($_POST['buss_phone']);
+                    $role       = "contractor";
+                } else {
+                    $role = "client";
+                }
 
-        if ($post_query -> have_posts()):
-            while ($post_query -> have_posts()): $post_query -> the_post();
+                $userdata = array(
+                    'user_login' => $username,
+                    'user_email' => $email,
+                    'user_pass'  => $password,
+                    'first_name' => $fname,
+                    'last_name'  => $lname,
+                    'role'       => $role
+                );
 
-        $jobStatus = get_field('job_status');
-        if ($jobStatus == 'approved') {
-            $btnStatus = 'disabled';
-            $btnColor  = '#008000';
-        } elseif ($jobStatus == 'rejected') {
-            $btnStatus = 'disabled';
-            $btnColor  = '#FF0000';
-        } else {
-            $btnStatus = '';
-            $btnColor  = '#008cff';
-        } ?>
-                <div id="box">
-                    <div class="image">
-                        <img src="<?php echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
-                    </div>
-                    <p><b><?php echo esc_html('Job name:'); ?></b> <?php the_title(); ?> </p>
-                    <p><b><?php echo esc_html('User name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
-                    <p><b><?php echo esc_html('Job description:'); ?></b> <?php echo get_field('job_description'); ?></p>
-                    <p><b><?php echo esc_html('Price:'); ?></b> <?php echo get_field('price'); ?> Rs.</p>
-                    <?php
-                    if ($current_role == 'contractor') {
-                        ?>
-                        <p><b><?php echo esc_html('Status:'); ?></b> <input type="submit" value="<?php echo get_field('job_status'); ?>" id="<?php echo $post->ID; ?>" style="background-color:<?php echo $btnColor; ?>" <?php echo $btnStatus; ?>></p>
-                        <?php
-                    } ?>
-                </div>
-            <?php
-            
-        endwhile;
-        endif;
-        wp_reset_query();
-        exit();
-    }
-
-    /**
-     * Callback function of activation hook
-     *
-     * Register two roles of 'Client' and 'Contractor' when plugin activate.
-     *
-     * @since 1.0.0
-     */
-    public function jbm_activate()
-    {
-        global $wp_roles;
-        $total_role      = $wp_roles->get_names();
-        $subscriber_role = $wp_roles->get_role('subscriber');
-
-   
-        if (!in_array('Client', $total_role)) {
-            add_role('client', 'Client', $subscriber_role->capabilities);
-        }
-        if (!in_array('Contractor', $total_role)) {
-            add_role('contractor', 'Contractor', $subscriber_role->capabilities);
-        }
-    }
-
-    /**
-     * Callback function of deactivation hook
-     *
-     * Remove roles of 'Client' and  'Contractor' when plugin deactivate.
-     *
-     * @since 1.0.0
-     */
-    public function jbm_deactivate()
-    {
-        global $wp_roles;
-        $total_role = $wp_roles->get_names();
-
-        if (in_array('Client', $total_role)) {
-            remove_role('client');
-        }
-        if (in_array('Contractor', $total_role)) {
-            remove_role('contractor');
-        }
-    }
-
-    /**
-     * Callback function of client registration shortcode
-     *
-     * @since 1.0.0
-     */
-    public function jbm_client_reg()
-    {
-        wp_enqueue_script(
-            'client-js',
-            jbm_url . 'assets/js/client_reg.js',
-            array('jquery'),
-            1.0,
-            true
-        );
-        wp_localize_script(
-            'client-js',
-            'myVar',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce'    => wp_create_nonce('client-nonce')
-            )
-        );
-        wp_enqueue_style(
-            'client-css',
-            jbm_url . 'assets/css/client_reg.css'
-        );
-
-        require_once jbm_path.'inc/client-registration.php';
-    }
-
-    /**
-    * Ajax callback for client registration
-    *
-    * @since 1.0.0
-    */
-    public function jbm_register_client()
-    {
-        if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'client-nonce')) {
-            $username = sanitize_text_field($_POST['username']);
-            $email    = sanitize_email($_POST['email']);
-            $fname    = sanitize_text_field($_POST['fname']);
-            $lname    = sanitize_text_field($_POST['lname']);
-            $url      = sanitize_text_field($_POST['url']);
-            $password = trim($_POST['password']);
-            $hash_key = md5(rand(0, 100));
-
-            $clientdata = array(
-                'user_login' => $username,
-                'user_email' => $email,
-                'user_pass'  => $password,
-                'first_name' => $fname,
-                'last_name'  => $lname,
-                'role'       => 'client'
-            );
-
-            $insert_client = wp_insert_user($clientdata);
-            if (!is_wp_error($insert_client)) {
-                // $activation_link = esc_url(home_url('/').'?email='.$email.'&hash='.$hash_key);
-                $activation_link = add_query_arg(array( 'key' => $hash_key, 'user' => $username ), $url);
-                add_user_meta($insert_client, 'activate', $hash_key);
-                add_user_meta($insert_client, 'permit', 'false');
-                $subject = 'Signup Verification';
-                $message = 'Hello &nbsp;'.$username.'<br/>
+                $insert_user = wp_insert_user($userdata);
+                if ($role == "contractor") {
+                    $user_data = get_user_by('login', $username);
+                    add_user_meta($user_data->ID, 'bussiness-name', $buss_name);
+                    add_user_meta($user_data->ID, 'bussiness-number', $buss_phone);
+                }
+                if (!is_wp_error($insert_user)) {
+                    $activation_link = esc_url(home_url('/').'?user='.$username.'&key='.$hash_key);
+                    add_user_meta($insert_user, 'activate', $hash_key);
+                    add_user_meta($insert_user, 'permit', 'false');
+                    $subject = 'Signup Verification';
+                    $message = 'Hello &nbsp;'.$username.'<br/>
                             Please click on the following link or copy the link and paste it to your browser to activate your profile and Sign in. <br/>'.$activation_link;
-                $headers = 'From: noreply@gmail.com' . "\r\n";
-                wp_mail($email, $subject, $message, $headers);
+                    $headers = 'From: noreply@gmail.com' . "\r\n";
+                    wp_mail($email, $subject, $message, $headers);
+                }
+                // echo "Registration completed successfully!";
+                echo "Account activation link has been sent to your email. Please verify and signin!";
+                exit();
+            } else {
+                echo "Invalid captcha, Please try again!";
+                exit();
             }
         }
     }
 
     /**
-     * Callback function of contractor registration shortcode
-     *
-     * @since 1.0.0
+     * For email verification
      */
-    public function jbm_contractor_reg()
+    public function jbm_my_init()
     {
-        wp_enqueue_script(
-            'contractor-js',
-            jbm_url . 'assets/js/contractor_reg.js',
-            array('jquery'),
-            1.0,
-            true
-        );
-        wp_localize_script(
-            'contractor-js',
-            'myVar',
-            array(
-                'ajax_url' => admin_url('admin-ajax.php'),
-                'nonce'    => wp_create_nonce('contractor-nonce')
-            )
-        );
-        wp_enqueue_style(
-            'contractor-css',
-            jbm_url .'assets/css/contractor_reg.css'
-        );
-
-        require_once jbm_path.'inc/contractor-regitration.php';
+        if (isset($_GET['user']) && isset($_GET['key'])) {
+            $key        = $_GET['key'];
+            $user       = $_GET['user'];
+            $usr_detail = get_user_by('login', $user);
+            $user_id    = $usr_detail->ID;
+            $hash_key   = get_user_meta($user_id, 'activate', true);
+            $permit     = get_user_meta($user_id, 'permit', true);
+            if ($hash_key == $key) {
+                if ($permit == 'false') {
+                    update_user_meta($user_id, 'permit', 'true');
+                    echo "<h4 style='color:green'>Hurray! Your account has been activated.</h4>";
+                } else {
+                    echo "<h4 style='color:red'>The url is either invalid or you already have activated your account.</h4>";
+                }
+            } else {
+                echo "<h4 style='color:red'>Invalid approach, please use the link that has been send to your email.</h4>";
+            }
+        }
     }
 
     /**
-    * Ajax callback for contractor registration
-    *
-    * @since 1.0.0
-    */
-    public function jbm_register_contractor()
+     * Authenticate user
+     *
+     * @param WP_User $user
+     * @return void
+     */
+    public function jbm_authenticate_user(WP_User $user)
     {
-        if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'contractor-nonce')) {
-            $username   = sanitize_text_field($_POST['username']);
-            $email      = sanitize_email($_POST['email']);
-            $fname      = sanitize_text_field($_POST['fname']);
-            $lname      = sanitize_text_field($_POST['lname']);
-            $password   = trim($_POST['password']);
-            $buss_name  = sanitize_text_field($_POST['buss_name']);
-            $buss_phone = sanitize_text_field($_POST['buss_phone']);
-
-            $contractordata = array(
-                'user_login' => $username,
-                'user_email' => $email,
-                'user_pass'  => $password,
-                'first_name' => $fname,
-                'last_name'  => $lname,
-                'role'       => 'contractor'
-            );
-
-            $insert_contractor = wp_insert_user($contractordata);
-
-            if ($insert_contractor) {
-                $user_data = get_user_by('login', $username);
-                add_user_meta($user_data->ID, 'bussiness-name', $buss_name);
-                add_user_meta($user_data->ID, 'bussiness-number', $buss_phone);
+        $activation_status = get_user_meta($user->ID, 'permit', true);
+        if ($activation_status) {
+            if ($activation_status == 'false') {
+                $message = esc_html__('User not verified.Please click the link in the activation email that has been sent to you.', 'jbm');
+                return new WP_Error('user_not_verified', $message);
             }
         }
+        return $user;
     }
 
     /**
@@ -645,14 +439,87 @@ class jbm_controller
             'joblist-css',
             jbm_url.'assets/css/job_list.css'
         );
-        // wp_enqueue_style('jbm_bootstrap', 'https://cdn.jsdelivr.net/npm/bootstrap@4.6.1/dist/css/bootstrap.min.css');
-        // wp_enqueue_script('boot1', 'https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.slim.min.js', 1.0, true);
-        // wp_enqueue_script('boot2', 'https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js', 1.0, true);
-        // wp_enqueue_script('boot2', 'https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js', 1.0, true);
 
-        // require_once jbm_path.'inc/job-list.php';
-        // require_once jbm_path.'inc/job-listing.php';
         require_once jbm_path.'inc/job-list-ajax.php';
+    }
+
+    /**
+     * Ajax callback function for job list
+     *
+     * @since 1.0.0
+     */
+    public function jbm_job_listing()
+    {
+        global $current_user;
+        global $post;
+        $role            = $current_user->roles;
+        $current_role    = implode($role);
+        $current_user_id = $current_user->ID;
+        $offset          = $_POST['offset'];
+        $post_query = new WP_Query(array(
+            'post_type'      => 'job',
+            'posts_per_page' => 2,
+            'order'          => 'ASC',
+            'offset'         => $offset,
+            'meta_query'     => array(
+                'relation' => 'AND',
+                array(
+                    'key'     => 'user_id',
+                    'value'   => $current_user_id,
+                    'compare' => 'LIKE'
+                ),
+                array(
+                    'key'     => 'user_id',
+                    'value'   => get_field('user_id'),
+                    'compare' => 'LIKE'
+                )
+            )
+        ));
+
+        if ($post_query -> have_posts()):
+            while ($post_query -> have_posts()): $post_query -> the_post();
+
+        $jobStatus = get_field('job_status');
+        if ($jobStatus == 'approved') {
+            $btnStatus = 'disabled';
+            $btnColor  = '#008000';
+        } elseif ($jobStatus == 'rejected') {
+            $btnStatus = 'disabled';
+            $btnColor  = '#FF0000';
+        } else {
+            $btnStatus = '';
+            $btnColor  = '#008cff';
+        } ?>
+                <div id="box">
+                    <div class="image">
+                        <img src="<?php echo get_the_post_thumbnail_url(); ?>" alt="image" height=150 width=150>
+                    </div>
+                    <p><b><?php echo esc_html('Job name:'); ?></b> <?php the_title(); ?> </p>
+                    <p><b><?php echo esc_html('User name:'); ?></b> <?php echo get_the_author_meta('display_name'); ?></p>
+                    <p><b><?php echo esc_html('Job description:'); ?></b> <?php echo get_field('job_description'); ?></p>
+                    <p><b><?php echo esc_html('Price:'); ?></b> <?php echo get_field('price'); ?> Rs.</p>
+                    <?php
+                    if ($current_role == 'contractor') {
+                        ?>
+                        <p><b><?php echo esc_html('Status:'); ?></b> <input type="submit" value="<?php echo get_field('job_status'); ?>" id="<?php echo $post->ID; ?>" style="background-color:<?php echo $btnColor; ?>" <?php echo $btnStatus; ?>></p>
+                        <?php
+                    } ?>
+                </div>
+            <?php
+            
+        endwhile;
+        endif;
+        wp_reset_query();
+        exit();
+    }
+
+    public function jbm_job_status()
+    {
+        if (isset($_POST['updateVal'])) {
+            $updateVal = $_POST['updateVal'];
+            $elementId = $_POST['elementId'];
+            update_field('job_status', $updateVal, $elementId);
+        }
     }
 
     /**
