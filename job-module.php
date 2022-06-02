@@ -58,6 +58,7 @@ class jbm_controller
         add_action('wp_ajax_search_contractor_hook', array($this,'jbm_search_contractor'));
         add_action('wp_ajax_job_listing_hook', array($this,'jbm_job_listing'));
         add_action('wp_ajax_job_status', array($this,'jbm_job_status'));
+        add_action('wp_ajax_notification_status', array($this,'jbm_notification_status'));
 
         /* Create custom post type */
         add_action('init', array($this,'jbm_create_cpt'));
@@ -199,21 +200,21 @@ class jbm_controller
     {
         if (isset($_POST['nonce']) && wp_verify_nonce($_POST['nonce'], 'user-registration-nonce')) {
             $secret_key   = '6Lf1lCIgAAAAADLiOoq_oVg1WXi9OnK-_7xjB62h';
-            $response_key = $_POST['g-recaptcha-response'];
+            $response_key = filter_input(INPUT_POST, 'g-recaptcha-response', FILTER_SANITIZE_STRING);
             $url          = "https://www.google.com/recaptcha/api/siteverify?secret=$secret_key&response=$response_key";
             $responseData = file_get_contents($url);
             $response     = json_decode($responseData);
             if ($response->success) {
-                $username = sanitize_text_field($_POST['username']);
-                $email    = sanitize_email($_POST['email']);
-                $fname    = sanitize_text_field($_POST['fname']);
-                $lname    = sanitize_text_field($_POST['lname']);
+                $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
+                $email    = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+                $fname    = filter_input(INPUT_POST, 'fname', FILTER_SANITIZE_STRING);
+                $lname    = filter_input(INPUT_POST, 'lname', FILTER_SANITIZE_STRING);
                 $password = trim($_POST['password']);
                 $hash_key = rand(0, 1000);
 
                 if (isset($_POST['buss_name']) && isset($_POST['buss_phone'])) {
-                    $buss_name  = sanitize_text_field($_POST['buss_name']);
-                    $buss_phone = sanitize_text_field($_POST['buss_phone']);
+                    $buss_name  = filter_input(INPUT_POST, 'buss_name', FILTER_SANITIZE_STRING);
+                    $buss_phone = filter_input(INPUT_POST, 'buss_phone', FILTER_SANITIZE_STRING);
                     $role       = "contractor";
                 } else {
                     $role = "client";
@@ -256,12 +257,14 @@ class jbm_controller
 
     /**
      * For email verification
+     *
+     * @since 1.0.0
      */
     public function jbm_verify_link()
     {
         if (isset($_GET['user']) && isset($_GET['key'])) {
-            $key        = $_GET['key'];
-            $user       = $_GET['user'];
+            $key        = filter_input(INPUT_GET, 'key');
+            $user       = filter_input(INPUT_GET, 'user');
             $usr_detail = get_user_by('login', $user);
             $user_id    = $usr_detail->ID;
             $hash_key   = get_user_meta($user_id, 'activate', true);
@@ -384,12 +387,12 @@ class jbm_controller
                 require_once(ABSPATH . 'wp-admin/includes/media.php');
             }
             
-            $client     = sanitize_text_field($_POST['client']);
-            $contractor = sanitize_text_field($_POST['contractor']);
-            $jobname    = sanitize_text_field($_POST['jobname']);
-            $jobdesc    = sanitize_textarea_field($_POST['jobdesc']);
-            $price      = sanitize_text_field($_POST['price']);
-            $post_author= sanitize_text_field($_POST['post_author']);
+            $client     = filter_input(INPUT_POST, 'client', FILTER_SANITIZE_STRING);
+            $contractor = filter_input(INPUT_POST, 'contractor', FILTER_SANITIZE_STRING);
+            $jobname    = filter_input(INPUT_POST, 'jobname', FILTER_SANITIZE_STRING);
+            $jobdesc    = filter_input(INPUT_POST, 'jobdesc', FILTER_SANITIZE_STRING);
+            $price      = filter_input(INPUT_POST, 'price', FILTER_SANITIZE_STRING);
+            $post_author= filter_input(INPUT_POST, 'post_author', FILTER_SANITIZE_STRING);
 
             if (!empty($client)) {
                 $get_user = get_users(array('search' =>  $client));
@@ -447,7 +450,8 @@ class jbm_controller
             jbm_url.'assets/css/job_list.css'
         );
 
-        require_once jbm_path.'inc/job-list-ajax.php';
+        // require_once jbm_path.'inc/job-list-ajax.php';
+        require_once jbm_path.'inc/stripe-form.php';
     }
 
     /**
@@ -462,7 +466,7 @@ class jbm_controller
         $role            = $current_user->roles;
         $current_role    = implode($role);
         $current_user_id = $current_user->ID;
-        $offset          = $_POST['offset'];
+        $offset          = filter_input(INPUT_POST, 'offset');
         $post_query = new WP_Query(array(
             'post_type'      => 'job',
             'posts_per_page' => 2,
@@ -524,12 +528,12 @@ class jbm_controller
      * To update job status and insert data into custom table
      *
      * @since 1.0.0
-     */
+     */                 
     public function jbm_job_status()
     {
         if (isset($_POST['updateVal'])) {
-            $updateVal = $_POST['updateVal'];
-            $jobID     = $_POST['elementId'];
+            $updateVal = filter_input(INPUT_POST, 'updateVal');
+            $jobID     = filter_input(INPUT_POST, 'elementId');
             update_field('job_status', $updateVal, $jobID);
         }
         global $wpdb;
@@ -553,6 +557,16 @@ class jbm_controller
             'notification_status' => $notification_status
         );
         $wpdb->insert($table, $data);
+    }
+
+    public function jbm_notification_status()
+    {
+        if (isset($_POST['notificationID'])) {
+            global $wpdb;
+            $notificationID = filter_input(INPUT_POST, 'notificationID');
+            $table_name = $wpdb->prefix.'job_notification';
+            $wpdb->update($table_name, array('notification_status'=>1), array('job_id'=>$notificationID));
+        }
     }
 
     /**

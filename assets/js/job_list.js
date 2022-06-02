@@ -88,6 +88,15 @@
     });
   });
   $(document).on("click", ".closebtn", function () {
-    this.parentElement.style.display='none';
+    this.parentElement.style.display = "none";
+    var notificationID = $(this).attr("id");
+    $.ajax({
+      url: myVar.ajax_url,
+      type: "POST",
+      data: {
+        action: "notification_status",
+        notificationID: notificationID,
+      },
+    });
   });
 })(jQuery);

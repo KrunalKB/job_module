@@ -8,24 +8,24 @@ $contractor_role = "contractor";
 
 // Notificaton popup
 global $wpdb;
-$table = $wpdb->prefix.'job_notification';
-$result = $wpdb->get_results("SELECT * FROM $table WHERE client_id = $current_user_id");
-$html  = '';
+$table  = $wpdb->prefix.'job_notification';
+$result = $wpdb->get_results("SELECT * FROM $table WHERE client_id = $current_user_id AND notification_status = 0");
+$html   = '';
+
 foreach ($result as $row) {
     $notification_text = $row->notification_text;
     $html .= sprintf('<div class="alert">');
-    $html .= sprintf('<span class="closebtn">&times;</span>');
+    $html .= sprintf('<span class="closebtn" id="%s">&times;</span>', $row->job_id);
     $html .= sprintf('<strong>Hello!</strong> %s', $notification_text);
     $html .= sprintf('</div><br>');
 }
-esc_html_e($html);
+echo $html;
+
+//Listing jobs
 if (is_user_logged_in()) {
     if (($current_role == $client_role) || ($current_role == $contractor_role)) {
         ?>
-				
-				<div class="main-container" id="response">	
-
-				</div>
+				<div class="main-container" id="response">	</div>
 
 				<button id="loadMore"><?php echo esc_html('Load More'); ?></button>
 				<div id="msg"></div>
